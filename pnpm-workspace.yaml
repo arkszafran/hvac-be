@@ -1,0 +1,8 @@
+minimumReleaseAge: 1440
+ignoredBuiltDependencies: [ '*' ]
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/engines': true
+  bcrypt: true
+  prisma: true
+  unrs-resolver: true

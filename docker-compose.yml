@@ -1,0 +1,41 @@
+version: "3.8"
+services:
+  db:
+    image: postgres:12
+    restart: "no"
+    ports:
+      - "5050:5432"
+    environment:
+      POSTGRES_DB: postgresdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
+  dbadmin:
+    image: dpage/pgadmin4
+    depends_on:
+      - db
+    restart: "no"
+    ports:
+      - "8081:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: pass123
+#  web:
+#    container_name: denta_apps_local
+#    build:
+#      context: .
+#      dockerfile: Dockerfile
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - "db"
+#    volumes:
+#      - .:/opt/sdh/denta-backend:rw
+#      - /opt/sdh/denta-backend/node_modules
+#    environment:
+#      NODE_ENV: development
+#      ENV: local
+#      POSTGRES_PASSWORD: admin123
+#      DATABASE_URL: "postgresql://postgres:admin123@db:5432/postgresdb?schema=public"
+#    command: ["./wait-for-postgres.sh", "db", "yarn", "run", "start"]
+#    links:
+#      - db

@@ -1,0 +1,206 @@
+# AGENTS.md
+
+## Project stack
+
+- NestJS
+- TypeScript
+- Prisma
+- PostgreSQL
+- pnpm
+- CQRS via `@nestjs/cqrs`
+
+## Commands
+
+- Install dependencies: `pnpm install`
+- Start dev server: `pnpm start:dev`
+- Build: `pnpm build`
+- Lint: `pnpm lint`
+- Test: `pnpm test`
+- Prisma generate: `pnpm prisma:generate`
+- Prisma dev migration: `pnpm prisma:migrate:dev`
+- Prisma deploy migration: `pnpm prisma:migrate:deploy`
+
+## Core architecture rules
+
+- Use feature-based modules.
+- Avoid organizing code by global technical layers such as one shared `controllers/` directory for the whole app.
+- Avoid circular dependencies.
+- Prefer constructor injection.
+- Do not use service locator patterns such as `ModuleRef.get()` unless explicitly justified.
+- Keep controllers thin.
+- Never put business logic in controllers.
+- Always use CQRS for application logic.
+- Every controller action must only validate/receive input and invoke a command or query.
+- Write business logic inside command handlers or query handlers.
+- Use events for decoupling between modules when direct dependencies would create tight coupling.
+- Do not create god services.
+- Keep each provider focused on one responsibility.
+
+## Module structure
+
+Each feature module should follow this structure:
+
+```txt
+src/modules/<feature>/
+  <feature>.module.ts
+
+  controllers/
+    <feature>.controller.ts
+
+  commands/
+    impl/
+      create-<entity>.command.ts
+      update-<entity>.command.ts
+      delete-<entity>.command.ts
+    handlers/
+      create-<entity>.handler.ts
+      update-<entity>.handler.ts
+      delete-<entity>.handler.ts
+    index.ts
+
+  queries/
+    impl/
+      get-<entity>.query.ts
+      list-<entities>.query.ts
+    handlers/
+      get-<entity>.handler.ts
+      list-<entities>.handler.ts
+    index.ts
+
+  infrastructure/
+    <feature>.repository.ts
+    <feature>.read-repository.ts
+
+  dto/
+    create-<entity>.dto.ts
+    update-<entity>.dto.ts
+    <entity>-response.dto.ts
+```
+
+## Controllers
+
+- Controllers must not contain business logic.
+- Controllers must not access Prisma, repositories, or infrastructure services directly.
+- Controllers must invoke `CommandBus.execute()` for state-changing operations.
+- Controllers must invoke `QueryBus.execute()` for read operations.
+- Controllers may map route params, query params, body DTOs, and current user context into commands or queries.
+
+Example:
+
+```ts
+@Post()
+create(@Body() dto: CreateUserDto) {
+  return this.commandBus.execute(new CreateUserCommand(dto));
+}
+
+@Get(':id')
+findOne(@Param('id') id: string) {
+  return this.queryBus.execute(new GetUserQuery(id));
+}
+```
+
+## Commands
+
+- Commands represent write operations.
+- Commands must be immutable data containers.
+- Commands must not contain business logic.
+- Command handlers contain write-side application logic.
+- Command handlers may call infrastructure repositories.
+- Command handlers may emit domain/application events.
+- Commands should be named with imperative intent, for example `CreateUserCommand`.
+
+## Queries
+
+- Queries represent read operations.
+- Queries must be immutable data containers.
+- Queries must not contain business logic.
+- Query handlers contain read-side application logic.
+- Query handlers may call read repositories or read models.
+- Queries should never modify state.
+- Queries should be named by intent, for example `GetUserByIdQuery`.
+
+## Infrastructure
+
+- Infrastructure contains data access only.
+- Infrastructure services may use Prisma.
+- Infrastructure may contain selects, inserts, updates, deletes, transactions, and database-specific mapping.
+- Do not put business rules in infrastructure.
+- Do not inject infrastructure services into controllers.
+- Prefer repository-style classes over direct Prisma usage in handlers when queries are non-trivial.
+- Keep Prisma-specific code isolated in infrastructure.
+
+## Prisma rules
+
+- Use `PrismaService` as the single Prisma client provider.
+- Do not instantiate `PrismaClient` outside `PrismaService`.
+- Use migrations for schema changes.
+- Do not edit existing migration files unless explicitly requested.
+- Use `pnpm prisma:migrate:deploy` during deployment.
+- Use transactions for multi-step writes that must be atomic.
+- Avoid N+1 queries.
+- Use `select` and `include` intentionally.
+
+## DTO and validation rules
+
+- Use DTOs for request bodies.
+- Use `class-validator` and `class-transformer`.
+- Enable global `ValidationPipe`.
+- Required validation config:
+
+```ts
+new ValidationPipe({
+  whitelist: true,
+  forbidNonWhitelisted: true,
+  transform: true,
+});
+```
+
+- Never trust request input.
+- Do not accept fields that are not defined in DTOs.
+
+## Security rules
+
+- Use `helmet`.
+- Use CORS with explicit allowed origins in production.
+- Use `@nestjs/throttler` for rate limiting.
+- Use guards for authentication and authorization.
+- Do not expose internal errors to clients.
+- Do not log secrets, tokens, passwords, or sensitive personal data.
+- Hash passwords with `bcrypt` or another approved password hashing library.
+- Never store plain-text passwords.
+- Keep JWT secrets and database URLs in environment variables.
+
+## Error handling
+
+- Throw NestJS HTTP exceptions for expected application errors.
+- Use global exception filters for consistent error responses.
+- Do not return raw Prisma errors to API consumers.
+- Map database constraint errors to meaningful API errors.
+
+## Testing rules
+
+- Add unit tests for command handlers and query handlers.
+- Mock infrastructure repositories in handler unit tests.
+- Use e2e tests for important API flows.
+- Do not test controllers for business logic because controllers should not contain business logic.
+- Run `pnpm test` after meaningful logic changes when possible.
+
+## Code style
+
+- Use strict TypeScript.
+- Avoid `any`.
+- Prefer explicit return types for public methods.
+- Use `async/await`.
+- Prefer readonly properties where possible.
+- Keep files small and focused.
+- Preserve existing project conventions.
+
+## Agent safety rules
+
+- Do not modify `.env` files.
+- Do not commit secrets.
+- Do not modify generated Prisma Client files.
+- Do not modify migrations unless explicitly requested.
+- Do not introduce new architectural patterns without explaining why.
+- Prefer extending existing modules over creating duplicate modules.
+- Before large refactors, inspect nearby code and follow existing conventions.
