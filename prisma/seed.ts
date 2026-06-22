@@ -2,13 +2,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 import 'dotenv/config';
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@generated/prisma/client';
 
 import { ISeed } from './seed-base/seed.interface';
 import { BaseSeed } from './seed-base/seed-base.class';
 import { ESeedStatus } from './seed-base/seed.enum';
 
-const prisma = new PrismaClient();
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error('DATABASE_URL env is missing.');
+}
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: databaseUrl }),
+});
+
+type SeedModule = {
+  default: new (prismaClient: PrismaClient) => BaseSeed;
+};
 
 async function main() {
   const completedSeedsIds = await getCompletedSeedsIds();
@@ -29,7 +42,7 @@ async function main() {
     });
 
     try {
-      const seedImport = await import(seedItem.path);
+      const seedImport = require(seedItem.path) as SeedModule;
       const seed: BaseSeed = new seedImport.default(prisma);
 
       await seed.execute();
@@ -72,16 +85,19 @@ function getSeedsList(): ISeed[] {
   const seedsDirectories = fs.readdirSync(mainSeedsDir);
 
   const seeds = seedsDirectories.map((seedDirectory) => {
-    const seedFileName = `${seedDirectory}.seed.ts`;
-    const seedFileFullPath = path.join(
-      mainSeedsDir,
-      seedDirectory,
-      seedFileName,
-    );
+    const seedFileNames = [
+      `${seedDirectory}.seed.ts`,
+      `${seedDirectory}.ts`,
+    ];
+    const seedFileFullPath = seedFileNames
+      .map((seedFileName) =>
+        path.join(mainSeedsDir, seedDirectory, seedFileName),
+      )
+      .find((seedFilePath) => fs.existsSync(seedFilePath));
 
-    if (!fs.existsSync(seedFileFullPath)) {
+    if (!seedFileFullPath) {
       throw Error(
-        `In directory ${seedDirectory} doesn't exist file ${seedFileName}`,
+        `In directory ${seedDirectory} doesn't exist file ${seedFileNames.join(' or ')}`,
       );
     }
 

@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '@generated/prisma/client';
 
 //import { fieldEncryptionMiddleware } from 'prisma-field-encryption';
 
@@ -9,7 +10,14 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   constructor() {
-    //this.addFieldEncryptionMiddleware();
+    const databaseUrl = process.env.DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL env is missing.');
+    }
+    super({
+      adapter: new PrismaPg({ connectionString: databaseUrl }),
+    });
+    // this.addFieldEncryptionMiddleware();
   }
 
   async onModuleInit() {
