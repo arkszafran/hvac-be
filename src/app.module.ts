@@ -5,6 +5,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { validateEnvironment } from './common/config/env.validation';
 import { QueuesModule } from './common/queues/queues.module';
+import { AuthenticationModule } from './authentication/authentication.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { QueuesModule } from './common/queues/queues.module';
       },
     ]),
     QueuesModule,
+    AuthenticationModule,
   ],
 })
 export class AppModule {}

@@ -8,7 +8,7 @@ const TEMPORARY_PASSWORD_DEFAULT_LENGTH = 20;
 const ARGON2_PASSWORD_OPTIONS = {
   type: argon2.argon2id,
   memoryCost: 65536,
-  timeCost: 3,
+  timeCost: 2,
   parallelism: 1,
 } as const;
 

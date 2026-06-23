@@ -34,6 +34,9 @@ model User {
   incorrectLoginCounter Int           @default(0)
   incorrectPINCounter   Int           @default(0)
   role                  UserRole      @default(TENANT_USER)
+  refreshTokenHash      String?
+  refreshTokenValidTo   DateTime?
+  sessionUnlockedUntil  DateTime?
   tenants               User_tenant[]
 }
 
