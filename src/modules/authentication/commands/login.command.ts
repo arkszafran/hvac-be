@@ -4,6 +4,7 @@ import type { Response } from 'express';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { verifyPassword } from '../../../common/security/password/password';
+import { AUTH_ERROR_CODES } from '../authentication.constants';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { LoginDto } from '../dto/login.dto';
 
@@ -31,23 +32,11 @@ export class LoginCommand {
       throw new UnauthorizedException('Invalid credentials.');
     }
 
-    const loginRetriesNumber = this.tokenService.getLoginRetriesNumber();
-
-    if (
-      user.status === UserStatus.blocked ||
-      user.incorrectLoginCounter >= loginRetriesNumber
-    ) {
-      if (user.status !== UserStatus.blocked) {
-        await this.prisma.user.update({
-          where: { id: user.id },
-          data: {
-            status: UserStatus.blocked,
-          },
-        });
-      }
-
-      throw new UnauthorizedException('Invalid credentials.');
+    if (user.status === UserStatus.blocked) {
+      throwLoginRetriesLimitReachedException();
     }
+
+    const loginRetriesNumber = this.tokenService.getLoginRetriesNumber();
 
     const isPasswordValid = await verifyPassword(dto.password, user.password);
 
@@ -64,6 +53,10 @@ export class LoginCommand {
               : user.status,
         },
       });
+
+      if (incorrectLoginCounter >= loginRetriesNumber) {
+        throwLoginRetriesLimitReachedException();
+      }
 
       throw new UnauthorizedException('Invalid credentials.');
     }
@@ -96,4 +89,11 @@ export class LoginCommand {
 
     return { success: true };
   }
+}
+
+function throwLoginRetriesLimitReachedException(): never {
+  throw new UnauthorizedException({
+    code: AUTH_ERROR_CODES.loginRetriesLimitReached,
+    message: 'Login retries limit reached.',
+  });
 }

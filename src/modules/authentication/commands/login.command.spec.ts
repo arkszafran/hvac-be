@@ -3,6 +3,7 @@ import { UserRole, UserStatus } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
 import { verifyPassword } from '../../../common/security/password/password';
+import { AUTH_ERROR_CODES } from '../authentication.constants';
 import { LoginCommand } from './login.command';
 
 jest.mock('../../../common/security/password/password', () => ({
@@ -75,23 +76,6 @@ describe('LoginCommand', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
-  it('blocks user without checking password when login retry limit is already reached', async () => {
-    const user = createUser({ incorrectLoginCounter: 3 });
-    prisma.user.findFirst.mockResolvedValue(user);
-
-    await expect(
-      command.execute({ email: user.email, password: 'secret' }, response),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-
-    expect(verifyPasswordMock).not.toHaveBeenCalled();
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: user.id },
-      data: {
-        status: UserStatus.blocked,
-      },
-    });
-  });
-
   it('does not update blocked user before throwing unauthorized', async () => {
     const user = createUser({
       status: UserStatus.blocked,
@@ -99,9 +83,9 @@ describe('LoginCommand', () => {
     });
     prisma.user.findFirst.mockResolvedValue(user);
 
-    await expect(
+    await expectLoginRetriesLimitReached(
       command.execute({ email: user.email, password: 'secret' }, response),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    );
 
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
@@ -112,9 +96,9 @@ describe('LoginCommand', () => {
     prisma.user.findFirst.mockResolvedValue(user);
     verifyPasswordMock.mockResolvedValue(false);
 
-    await expect(
+    await expectLoginRetriesLimitReached(
       command.execute({ email: user.email, password: 'wrong' }, response),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
+    );
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: user.id },
@@ -183,4 +167,15 @@ function createUser(
 
 function futureDate(): Date {
   return new Date(Date.now() + 60 * 60 * 1000);
+}
+
+async function expectLoginRetriesLimitReached(
+  promise: Promise<unknown>,
+): Promise<void> {
+  await expect(promise).rejects.toMatchObject({
+    response: {
+      code: AUTH_ERROR_CODES.loginRetriesLimitReached,
+      message: 'Login retries limit reached.',
+    },
+  });
 }

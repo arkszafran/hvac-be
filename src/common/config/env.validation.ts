@@ -19,6 +19,7 @@ export function validateEnvironment(
   assertPositiveInteger(config, 'SESSION_DURATION_HOURS');
   assertPositiveInteger(config, 'PIN_RETRIES_NUMBER');
   assertPositiveInteger(config, 'LOGIN_RETRIES_NUMBER');
+  assertOptionalBoolean(config, 'SWAGGER_ON');
 
   return config;
 }
@@ -48,5 +49,30 @@ function assertPositiveInteger(
 
   if (!Number.isInteger(numberValue) || numberValue <= 0) {
     throw new Error(`${key} env must be a positive integer.`);
+  }
+}
+
+function assertOptionalBoolean(
+  config: Record<string, unknown>,
+  key: string,
+): void {
+  const value = config[key];
+
+  if (value === undefined) {
+    return;
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error(`${key} env must be a boolean value.`);
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+
+  if (
+    !['true', 'false', '1', '0', 'yes', 'no', 'on', 'off'].includes(
+      normalizedValue,
+    )
+  ) {
+    throw new Error(`${key} env must be a boolean value.`);
   }
 }
