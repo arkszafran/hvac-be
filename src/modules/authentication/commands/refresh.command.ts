@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { Response } from 'express';
 
-import { PrismaService } from '../../common/prisma/prisma.service';
+import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
   AUTH_REDIRECT_REASONS,
   AUTH_COOKIE_NAMES,

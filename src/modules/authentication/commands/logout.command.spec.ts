@@ -4,7 +4,7 @@ import { AUTH_COOKIE_NAMES } from '../authentication.constants';
 import type { RequestWithCookies } from '../authentication.types';
 import { LogoutCommand } from './logout.command';
 
-jest.mock('../../common/prisma/prisma.service', () => ({
+jest.mock('../../../common/prisma/prisma.service', () => ({
   PrismaService: jest.fn(),
 }));
 

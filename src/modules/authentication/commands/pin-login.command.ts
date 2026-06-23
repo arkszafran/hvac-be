@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Response } from 'express';
 
-import { PrismaService } from '../../common/prisma/prisma.service';
-import { verifyPassword } from '../../common/security/password/password';
+import { PrismaService } from '../../../common/prisma/prisma.service';
+import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_REDIRECT_REASONS } from '../authentication.constants';
 import { AuthenticationSessionService } from '../authentication-session.service';
 import { AuthenticationTokenService } from '../authentication-token.service';

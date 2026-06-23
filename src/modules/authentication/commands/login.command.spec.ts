@@ -2,13 +2,13 @@ import { UnauthorizedException } from '@nestjs/common';
 import { UserRole, UserStatus } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
-import { verifyPassword } from '../../common/security/password/password';
+import { verifyPassword } from '../../../common/security/password/password';
 import { LoginCommand } from './login.command';
 
-jest.mock('../../common/security/password/password', () => ({
+jest.mock('../../../common/security/password/password', () => ({
   verifyPassword: jest.fn(),
 }));
-jest.mock('../../common/prisma/prisma.service', () => ({
+jest.mock('../../../common/prisma/prisma.service', () => ({
   PrismaService: jest.fn(),
 }));
 

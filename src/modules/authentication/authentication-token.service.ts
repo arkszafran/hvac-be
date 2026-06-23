@@ -7,7 +7,7 @@ import type { CookieOptions, Response } from 'express';
 import {
   hashPassword,
   verifyPassword,
-} from '../common/security/password/password';
+} from '../../common/security/password/password';
 import { AUTH_COOKIE_NAMES } from './authentication.constants';
 import type {
   AccessTokenPayload,

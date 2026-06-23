@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Response } from 'express';
 
-import { PrismaService } from '../../common/prisma/prisma.service';
+import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUTH_COOKIE_NAMES } from '../authentication.constants';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { RequestWithCookies } from '../authentication.types';

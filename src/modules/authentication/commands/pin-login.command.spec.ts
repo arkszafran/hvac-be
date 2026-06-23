@@ -2,15 +2,15 @@ import { HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
-import { verifyPassword } from '../../common/security/password/password';
+import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_REDIRECT_REASONS } from '../authentication.constants';
 import type { RequestWithCookies } from '../authentication.types';
 import { PinLoginCommand } from './pin-login.command';
 
-jest.mock('../../common/security/password/password', () => ({
+jest.mock('../../../common/security/password/password', () => ({
   verifyPassword: jest.fn(),
 }));
-jest.mock('../../common/prisma/prisma.service', () => ({
+jest.mock('../../../common/prisma/prisma.service', () => ({
   PrismaService: jest.fn(),
 }));
 

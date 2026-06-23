@@ -5,7 +5,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { validateEnvironment } from './common/config/env.validation';
 import { QueuesModule } from './common/queues/queues.module';
-import { AuthenticationModule } from './authentication/authentication.module';
+import { AuthenticationModule } from './modules/authentication/authentication.module';
 
 @Module({
   imports: [

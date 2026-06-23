@@ -6,7 +6,7 @@ import { AUTH_REDIRECT_REASONS } from '../authentication.constants';
 import type { RequestWithCookies } from '../authentication.types';
 import { RefreshCommand } from './refresh.command';
 
-jest.mock('../../common/prisma/prisma.service', () => ({
+jest.mock('../../../common/prisma/prisma.service', () => ({
   PrismaService: jest.fn(),
 }));
 
