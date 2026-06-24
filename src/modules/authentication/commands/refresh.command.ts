@@ -1,10 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { Response } from 'express';
 
+import { apiError, apiSuccess } from '../../../common/types/api-response.type';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import {
-  AUTH_REDIRECT_REASONS,
   AUTH_COOKIE_NAMES,
+  AUTH_ERROR_CODES,
 } from '../authentication.constants';
 import { AuthenticationSessionService } from '../authentication-session.service';
 import { AuthenticationTokenService } from '../authentication-token.service';
@@ -25,10 +26,13 @@ export class RefreshCommand {
     if (!user.sessionUnlockedUntil || user.sessionUnlockedUntil <= new Date()) {
       response.status(HttpStatus.LOCKED);
 
-      return {
-        reason: AUTH_REDIRECT_REASONS.pinRequired,
-        redirectTo: this.tokenService.getFrontendRedirect('/pin-login'),
-      };
+      return apiError({
+        code: AUTH_ERROR_CODES.pinRequired,
+        message: 'PIN login is required.',
+        details: {
+          redirectTo: this.tokenService.getFrontendRedirect('/pin-login'),
+        },
+      });
     }
 
     const refreshToken = this.tokenService.createRefreshToken();
@@ -52,6 +56,6 @@ export class RefreshCommand {
       this.tokenService.getCookie(request, AUTH_COOKIE_NAMES.userId) ?? user.id,
     );
 
-    return { success: true };
+    return apiSuccess();
   }
 }

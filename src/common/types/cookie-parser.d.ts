@@ -1,10 +1,8 @@
 declare module 'cookie-parser' {
-  import type { RequestHandler } from 'express';
-
   function cookieParser(
     secret?: string | string[],
     options?: Record<string, unknown>,
-  ): RequestHandler;
+  ): import('express').RequestHandler;
 
   export = cookieParser;
 }

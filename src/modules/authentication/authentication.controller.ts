@@ -26,8 +26,8 @@ import { PinLoginCommand } from './commands/pin-login.command';
 import { RefreshCommand } from './commands/refresh.command';
 import { AUTH_COOKIE_NAMES } from './authentication.constants';
 import {
-  AuthenticationUnauthorizedResponseDto,
-  AuthenticationRedirectResponseDto,
+  AuthenticationErrorResponseDto,
+  AuthenticationRedirectErrorResponseDto,
   AuthenticationSuccessResponseDto,
   LoginRetriesLimitReachedResponseDto,
 } from './dto/authentication-response.dto';
@@ -37,7 +37,8 @@ import type { RequestWithCookies } from './authentication.types';
 
 @ApiTags('authentication')
 @ApiExtraModels(
-  AuthenticationUnauthorizedResponseDto,
+  AuthenticationErrorResponseDto,
+  AuthenticationRedirectErrorResponseDto,
   LoginRetriesLimitReachedResponseDto,
 )
 @Controller('authentication')
@@ -62,7 +63,7 @@ export class AuthenticationController {
       'Credentials are invalid or login retry limit has been reached.',
     schema: {
       oneOf: [
-        { $ref: getSchemaPath(AuthenticationUnauthorizedResponseDto) },
+        { $ref: getSchemaPath(AuthenticationErrorResponseDto) },
         { $ref: getSchemaPath(LoginRetriesLimitReachedResponseDto) },
       ],
     },
@@ -82,10 +83,11 @@ export class AuthenticationController {
   })
   @ApiResponse({
     status: HttpStatus.LOCKED,
-    type: AuthenticationRedirectResponseDto,
+    type: AuthenticationRedirectErrorResponseDto,
     description: 'PIN login is required before refreshing the session.',
   })
   @ApiUnauthorizedResponse({
+    type: AuthenticationErrorResponseDto,
     description: 'Refresh token is missing, invalid, or expired.',
   })
   refresh(
@@ -121,7 +123,12 @@ export class AuthenticationController {
     description: 'Session was unlocked and authentication cookies were set.',
   })
   @ApiUnauthorizedResponse({
-    type: AuthenticationRedirectResponseDto,
+    schema: {
+      oneOf: [
+        { $ref: getSchemaPath(AuthenticationErrorResponseDto) },
+        { $ref: getSchemaPath(AuthenticationRedirectErrorResponseDto) },
+      ],
+    },
     description: 'PIN is invalid or login is required again.',
   })
   pinLogin(

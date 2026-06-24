@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Response } from 'express';
 
+import { apiSuccess } from '../../../common/types/api-response.type';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { AUTH_COOKIE_NAMES } from '../authentication.constants';
 import { AuthenticationTokenService } from '../authentication-token.service';
@@ -32,6 +33,6 @@ export class LogoutCommand {
 
     this.tokenService.clearAuthCookies(response);
 
-    return { success: true };
+    return apiSuccess();
   }
 }

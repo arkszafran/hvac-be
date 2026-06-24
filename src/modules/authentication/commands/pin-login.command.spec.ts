@@ -3,7 +3,7 @@ import { UserRole } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
 import { verifyPassword } from '../../../common/security/password/password';
-import { AUTH_REDIRECT_REASONS } from '../authentication.constants';
+import { AUTH_ERROR_CODES } from '../authentication.constants';
 import type { RequestWithCookies } from '../authentication.types';
 import { PinLoginCommand } from './pin-login.command';
 
@@ -114,8 +114,14 @@ describe('PinLoginCommand', () => {
     await expect(
       command.execute({ pin: '9999' }, request, response),
     ).resolves.toEqual({
-      reason: AUTH_REDIRECT_REASONS.loginRequired,
-      redirectTo: '/login',
+      success: false,
+      error: {
+        code: AUTH_ERROR_CODES.loginRequired,
+        message: 'Login is required.',
+        details: {
+          redirectTo: '/login',
+        },
+      },
     });
 
     expect(prisma.user.update).toHaveBeenCalledWith({
@@ -137,7 +143,7 @@ describe('PinLoginCommand', () => {
 
     await expect(
       command.execute({ pin: '1234' }, request, response),
-    ).resolves.toEqual({ success: true });
+    ).resolves.toEqual({ success: true, data: null });
 
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: user.id },

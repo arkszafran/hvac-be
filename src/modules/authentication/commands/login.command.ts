@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserStatus } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
+import { apiError, apiSuccess } from '../../../common/types/api-response.type';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_ERROR_CODES } from '../authentication.constants';
@@ -29,7 +30,7 @@ export class LoginCommand {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials.');
+      throwInvalidCredentialsException();
     }
 
     if (user.status === UserStatus.blocked) {
@@ -58,7 +59,7 @@ export class LoginCommand {
         throwLoginRetriesLimitReachedException();
       }
 
-      throw new UnauthorizedException('Invalid credentials.');
+      throwInvalidCredentialsException();
     }
 
     const now = new Date();
@@ -87,13 +88,24 @@ export class LoginCommand {
       userId: user.id,
     });
 
-    return { success: true };
+    return apiSuccess();
   }
 }
 
+function throwInvalidCredentialsException(): never {
+  throw new UnauthorizedException(
+    apiError({
+      code: AUTH_ERROR_CODES.invalidCredentials,
+      message: 'Invalid credentials.',
+    }),
+  );
+}
+
 function throwLoginRetriesLimitReachedException(): never {
-  throw new UnauthorizedException({
-    code: AUTH_ERROR_CODES.loginRetriesLimitReached,
-    message: 'Login retries limit reached.',
-  });
+  throw new UnauthorizedException(
+    apiError({
+      code: AUTH_ERROR_CODES.loginRetriesLimitReached,
+      message: 'Login retries limit reached.',
+    }),
+  );
 }

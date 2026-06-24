@@ -45,6 +45,7 @@ describe('LogoutCommand', () => {
 
     await expect(command.execute(request, response)).resolves.toEqual({
       success: true,
+      data: null,
     });
 
     expect(tokenService.getCookie).toHaveBeenCalledWith(
@@ -67,6 +68,7 @@ describe('LogoutCommand', () => {
 
     await expect(command.execute(request, response)).resolves.toEqual({
       success: true,
+      data: null,
     });
 
     expect(prisma.user.updateMany).not.toHaveBeenCalled();

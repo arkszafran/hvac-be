@@ -119,7 +119,7 @@ describe('LoginCommand', () => {
 
     await expect(
       command.execute({ email: user.email, password: 'secret' }, response),
-    ).resolves.toEqual({ success: true });
+    ).resolves.toEqual({ success: true, data: null });
 
     expect(tokenService.createRefreshToken).toHaveBeenCalled();
     expect(tokenService.hashToken).toHaveBeenCalledWith('refresh-token');
@@ -174,8 +174,12 @@ async function expectLoginRetriesLimitReached(
 ): Promise<void> {
   await expect(promise).rejects.toMatchObject({
     response: {
-      code: AUTH_ERROR_CODES.loginRetriesLimitReached,
-      message: 'Login retries limit reached.',
+      success: false,
+      error: {
+        code: AUTH_ERROR_CODES.loginRetriesLimitReached,
+        message: 'Login retries limit reached.',
+        details: null,
+      },
     },
   });
 }

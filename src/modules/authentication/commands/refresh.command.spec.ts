@@ -2,7 +2,7 @@ import { HttpStatus } from '@nestjs/common';
 import { UserRole } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
-import { AUTH_REDIRECT_REASONS } from '../authentication.constants';
+import { AUTH_ERROR_CODES } from '../authentication.constants';
 import type { RequestWithCookies } from '../authentication.types';
 import { RefreshCommand } from './refresh.command';
 
@@ -76,8 +76,14 @@ describe('RefreshCommand', () => {
     sessionService.getUserWithValidRefreshToken.mockResolvedValue(user);
 
     await expect(command.execute(request, response)).resolves.toEqual({
-      reason: AUTH_REDIRECT_REASONS.pinRequired,
-      redirectTo: '/pin-login',
+      success: false,
+      error: {
+        code: AUTH_ERROR_CODES.pinRequired,
+        message: 'PIN login is required.',
+        details: {
+          redirectTo: '/pin-login',
+        },
+      },
     });
 
     expect(response.status).toHaveBeenCalledWith(HttpStatus.LOCKED);
@@ -93,6 +99,7 @@ describe('RefreshCommand', () => {
 
     await expect(command.execute(request, response)).resolves.toEqual({
       success: true,
+      data: null,
     });
 
     expect(prisma.user.update).toHaveBeenCalledWith({

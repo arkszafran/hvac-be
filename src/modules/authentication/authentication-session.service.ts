@@ -1,7 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 
+import { apiError } from '../../common/types/api-response.type';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { AUTH_COOKIE_NAMES } from './authentication.constants';
+import {
+  AUTH_COOKIE_NAMES,
+  AUTH_ERROR_CODES,
+} from './authentication.constants';
 import { AuthenticationTokenService } from './authentication-token.service';
 import type { RequestWithCookies } from './authentication.types';
 
@@ -23,7 +27,12 @@ export class AuthenticationSessionService {
     );
 
     if (!userId || !refreshToken) {
-      throw new UnauthorizedException('Refresh token is missing.');
+      throw new UnauthorizedException(
+        apiError({
+          code: AUTH_ERROR_CODES.refreshTokenMissing,
+          message: 'Refresh token is missing.',
+        }),
+      );
     }
 
     const user = await this.prisma.user.findUnique({
@@ -43,7 +52,7 @@ export class AuthenticationSessionService {
       !user.refreshTokenValidTo ||
       user.refreshTokenValidTo <= new Date()
     ) {
-      throw new UnauthorizedException('Refresh token is invalid.');
+      throwInvalidRefreshTokenException();
     }
 
     const isRefreshTokenValid = await this.tokenService.verifyToken(
@@ -52,9 +61,18 @@ export class AuthenticationSessionService {
     );
 
     if (!isRefreshTokenValid) {
-      throw new UnauthorizedException('Refresh token is invalid.');
+      throwInvalidRefreshTokenException();
     }
 
     return user;
   }
+}
+
+function throwInvalidRefreshTokenException(): never {
+  throw new UnauthorizedException(
+    apiError({
+      code: AUTH_ERROR_CODES.refreshTokenInvalid,
+      message: 'Refresh token is invalid.',
+    }),
+  );
 }

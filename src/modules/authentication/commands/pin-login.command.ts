@@ -1,9 +1,10 @@
 import { HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Response } from 'express';
 
+import { apiError, apiSuccess } from '../../../common/types/api-response.type';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { verifyPassword } from '../../../common/security/password/password';
-import { AUTH_REDIRECT_REASONS } from '../authentication.constants';
+import { AUTH_ERROR_CODES } from '../authentication.constants';
 import { AuthenticationSessionService } from '../authentication-session.service';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { PinLoginDto } from '../dto/pin-login.dto';
@@ -26,7 +27,7 @@ export class PinLoginCommand {
       await this.sessionService.getUserWithValidRefreshToken(request);
 
     if (user.incorrectPINCounter >= this.tokenService.getPinRetriesNumber()) {
-      throw new UnauthorizedException('Invalid PIN.');
+      throwInvalidPinException();
     }
 
     const isPinValid = user.pin
@@ -49,10 +50,13 @@ export class PinLoginCommand {
         this.tokenService.clearAuthCookies(response);
         response.status(HttpStatus.UNAUTHORIZED);
 
-        return {
-          reason: AUTH_REDIRECT_REASONS.loginRequired,
-          redirectTo: this.tokenService.getFrontendRedirect('/login'),
-        };
+        return apiError({
+          code: AUTH_ERROR_CODES.loginRequired,
+          message: 'Login is required.',
+          details: {
+            redirectTo: this.tokenService.getFrontendRedirect('/login'),
+          },
+        });
       }
 
       await this.prisma.user.update({
@@ -62,7 +66,7 @@ export class PinLoginCommand {
         },
       });
 
-      throw new UnauthorizedException('Invalid PIN.');
+      throwInvalidPinException();
     }
 
     const now = new Date();
@@ -88,6 +92,15 @@ export class PinLoginCommand {
       userId: user.id,
     });
 
-    return { success: true };
+    return apiSuccess();
   }
+}
+
+function throwInvalidPinException(): never {
+  throw new UnauthorizedException(
+    apiError({
+      code: AUTH_ERROR_CODES.invalidPin,
+      message: 'Invalid PIN.',
+    }),
+  );
 }

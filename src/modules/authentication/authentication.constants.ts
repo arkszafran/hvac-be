@@ -4,11 +4,12 @@ export const AUTH_COOKIE_NAMES = {
   userId: 'userId',
 } as const;
 
-export const AUTH_REDIRECT_REASONS = {
+export const AUTH_ERROR_CODES = {
+  invalidCredentials: 'INVALID_CREDENTIALS',
+  invalidPin: 'INVALID_PIN',
+  refreshTokenMissing: 'REFRESH_TOKEN_MISSING',
+  refreshTokenInvalid: 'REFRESH_TOKEN_INVALID',
   pinRequired: 'PIN_REQUIRED',
   loginRequired: 'LOGIN_REQUIRED',
-} as const;
-
-export const AUTH_ERROR_CODES = {
   loginRetriesLimitReached: 'LOGIN_RETRIES_LIMIT_REACHED',
 } as const;
