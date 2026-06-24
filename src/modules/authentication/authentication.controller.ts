@@ -27,6 +27,8 @@ import { LoginCommand } from './commands/login.command';
 import { LogoutCommand } from './commands/logout.command';
 import { PinLoginCommand } from './commands/pin-login.command';
 import { RefreshCommand } from './commands/refresh.command';
+import { RequestPasswordResetCommand } from './commands/request-password-reset.command';
+import { ResetPasswordCommand } from './commands/reset-password.command';
 import { UnlockAccountCommand } from './commands/unlock-account.command';
 import { AUTH_COOKIE_NAMES } from './authentication.constants';
 import {
@@ -37,6 +39,8 @@ import {
 } from './dto/authentication-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { PinLoginDto } from './dto/pin-login.dto';
+import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UnlockAccountDto } from './dto/unlock-account.dto';
 import type { RequestWithCookies } from './authentication.types';
 
@@ -54,6 +58,8 @@ export class AuthenticationController {
     private readonly logoutCommand: LogoutCommand,
     private readonly pinLoginCommand: PinLoginCommand,
     private readonly unlockAccountCommand: UnlockAccountCommand,
+    private readonly requestPasswordResetCommand: RequestPasswordResetCommand,
+    private readonly resetPasswordCommand: ResetPasswordCommand,
   ) {}
 
   @Post('login')
@@ -158,5 +164,33 @@ export class AuthenticationController {
   })
   unlockAccount(@Query() dto: UnlockAccountDto) {
     return this.unlockAccountCommand.execute(dto);
+  }
+
+  @Post('password-reset-request')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Request password reset email' })
+  @ApiBody({ type: RequestPasswordResetDto })
+  @ApiOkResponse({
+    type: AuthenticationSuccessResponseDto,
+    description: 'Password reset email was queued when account exists.',
+  })
+  requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    return this.requestPasswordResetCommand.execute(dto);
+  }
+
+  @Post('password-reset')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Reset password with email code' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiOkResponse({
+    type: AuthenticationSuccessResponseDto,
+    description: 'Password was reset.',
+  })
+  @ApiBadRequestResponse({
+    type: AuthenticationErrorResponseDto,
+    description: 'Password reset code is missing, invalid, or expired.',
+  })
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.resetPasswordCommand.execute(dto);
   }
 }

@@ -20,6 +20,8 @@ export function validateEnvironment(
   assertPositiveInteger(config, 'SESSION_DURATION_HOURS');
   assertPositiveInteger(config, 'PIN_RETRIES_NUMBER');
   assertPositiveInteger(config, 'LOGIN_RETRIES_NUMBER');
+  assertPositiveInteger(config, 'PASSWORD_RESET_CODE_TTL_MINUTES');
+  assertPositiveInteger(config, 'PASSWORD_RESET_CODE_RETRIES_NUMBER');
   assertOptionalBoolean(config, 'SWAGGER_ON');
   assertSmtpUrl(config, 'SMTP_URL');
   assertRequiredString(config, 'SMTP_USER');

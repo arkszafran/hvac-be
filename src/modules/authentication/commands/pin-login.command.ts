@@ -5,6 +5,7 @@ import { apiError, apiSuccess } from '../../../common/types/api-response.type';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_ERROR_CODES } from '../authentication.constants';
+import { AuthenticationAccountStatusService } from '../authentication-account-status.service';
 import { AuthenticationSessionService } from '../authentication-session.service';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { PinLoginDto } from '../dto/pin-login.dto';
@@ -16,6 +17,7 @@ export class PinLoginCommand {
     private readonly prisma: PrismaService,
     private readonly sessionService: AuthenticationSessionService,
     private readonly tokenService: AuthenticationTokenService,
+    private readonly accountStatusService: AuthenticationAccountStatusService,
   ) {}
 
   async execute(
@@ -25,6 +27,8 @@ export class PinLoginCommand {
   ) {
     const user =
       await this.sessionService.getUserWithValidRefreshToken(request);
+
+    await this.accountStatusService.throwIfBlocked(user);
 
     if (user.incorrectPINCounter >= this.tokenService.getPinRetriesNumber()) {
       throwInvalidPinException();

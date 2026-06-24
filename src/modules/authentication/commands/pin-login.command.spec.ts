@@ -1,5 +1,5 @@
 import { HttpStatus, UnauthorizedException } from '@nestjs/common';
-import { UserRole } from '@generated/prisma/enums';
+import { UserRole, UserStatus } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
 import { verifyPassword } from '../../../common/security/password/password';
@@ -37,6 +37,9 @@ describe('PinLoginCommand', () => {
     clearAuthCookies: jest.Mock;
     getFrontendRedirect: jest.Mock;
   };
+  let accountStatusService: {
+    throwIfBlocked: jest.Mock;
+  };
   let request: RequestWithCookies;
   let response: Response & { status: jest.Mock };
   let command: PinLoginCommand;
@@ -60,6 +63,9 @@ describe('PinLoginCommand', () => {
       clearAuthCookies: jest.fn(),
       getFrontendRedirect: jest.fn().mockReturnValue('/login'),
     };
+    accountStatusService = {
+      throwIfBlocked: jest.fn().mockResolvedValue(undefined),
+    };
     request = { cookies: {} } as RequestWithCookies;
     response = {
       status: jest.fn().mockReturnThis(),
@@ -72,6 +78,9 @@ describe('PinLoginCommand', () => {
       tokenService as unknown as ConstructorParameters<
         typeof PinLoginCommand
       >[2],
+      accountStatusService as unknown as ConstructorParameters<
+        typeof PinLoginCommand
+      >[3],
     );
 
     verifyPasswordMock.mockReset();
@@ -172,6 +181,8 @@ function createUser(
   return {
     id: 'user-id',
     role: UserRole.ADMIN,
+    status: UserStatus.active,
+    accountUnlockCodeHash: null,
     tenants: [],
     pin: overrides.pin ?? 'pin-hash',
     incorrectPINCounter: overrides.incorrectPINCounter ?? 0,

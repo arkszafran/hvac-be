@@ -1,5 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
-import { UserRole } from '@generated/prisma/enums';
+import { UserRole, UserStatus } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
 import { AUTH_ERROR_CODES } from '../authentication.constants';
@@ -32,6 +32,9 @@ describe('RefreshCommand', () => {
     getCookie: jest.Mock;
     getFrontendRedirect: jest.Mock;
   };
+  let accountStatusService: {
+    throwIfBlocked: jest.Mock;
+  };
   let response: Response & { status: jest.Mock };
   let request: RequestWithCookies;
   let command: RefreshCommand;
@@ -56,6 +59,9 @@ describe('RefreshCommand', () => {
       getCookie: jest.fn().mockReturnValue('cookie-user-id'),
       getFrontendRedirect: jest.fn().mockReturnValue('/pin-login'),
     };
+    accountStatusService = {
+      throwIfBlocked: jest.fn().mockResolvedValue(undefined),
+    };
     response = {
       status: jest.fn().mockReturnThis(),
     } as unknown as Response & { status: jest.Mock };
@@ -68,6 +74,9 @@ describe('RefreshCommand', () => {
       tokenService as unknown as ConstructorParameters<
         typeof RefreshCommand
       >[2],
+      accountStatusService as unknown as ConstructorParameters<
+        typeof RefreshCommand
+      >[3],
     );
   });
 
@@ -129,6 +138,8 @@ function createUser(overrides: Partial<{ sessionUnlockedUntil: Date | null }>) {
   return {
     id: 'user-id',
     role: UserRole.ADMIN,
+    status: UserStatus.active,
+    accountUnlockCodeHash: null,
     tenants: [],
     sessionUnlockedUntil: overrides.sessionUnlockedUntil ?? null,
   };

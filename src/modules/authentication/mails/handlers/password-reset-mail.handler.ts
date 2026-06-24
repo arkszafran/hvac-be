@@ -7,10 +7,10 @@ import { MailService } from '../../../../common/mail/mail.service';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { AuthenticationTokenService } from '../../authentication-token.service';
 
-const ACCOUNT_UNLOCK_CODE_BYTES = 32;
+const PASSWORD_RESET_CODE_BYTES = 32;
 
 @Injectable()
-export class AccountUnlockMailHandler {
+export class PasswordResetMailHandler {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
@@ -29,35 +29,39 @@ export class AccountUnlockMailHandler {
     });
 
     if (!user) {
-      throw new NotFoundException('User for account unlock email not found.');
+      throw new NotFoundException('User for password reset email not found.');
     }
 
-    const code = this.createUnlockCode();
-    const accountUnlockCodeHash = await this.tokenService.hashToken(code);
+    const code = this.createResetCode();
+    const passwordResetCodeHash = await this.tokenService.hashToken(code);
+    const passwordResetCodeValidTo = this.getResetCodeValidTo();
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
-        accountUnlockCodeHash,
+        passwordResetCodeHash,
+        passwordResetCodeValidTo,
+        passwordResetIncorrectCounter: 0,
       },
     });
 
     await this.mailService.sendEmail({
       recipients: user.email,
-      subject: 'Odblokowanie konta',
+      subject: 'Reset hasla',
       templateFilePath: this.getTemplateFilePath(),
       templateVariables: {
         name: user.name,
-        unlockUrl: this.getUnlockUrl(user.id, code),
+        resetUrl: this.getResetUrl(user.id, code),
+        validMinutes: this.getResetCodeTtlMinutes(),
       },
     });
   }
 
-  private createUnlockCode(): string {
-    return randomBytes(ACCOUNT_UNLOCK_CODE_BYTES).toString('base64url');
+  private createResetCode(): string {
+    return randomBytes(PASSWORD_RESET_CODE_BYTES).toString('base64url');
   }
 
-  private getUnlockUrl(userId: string, code: string): string {
+  private getResetUrl(userId: string, code: string): string {
     const baseUrl = this.configService
       .getOrThrow<string>('FRONTEND_ORIGIN')
       .replace(/\/$/, '');
@@ -66,10 +70,25 @@ export class AccountUnlockMailHandler {
       code,
     });
 
-    return `${baseUrl}/account-unlock#${params.toString()}`;
+    return `${baseUrl}/password-reset#${params.toString()}`;
+  }
+
+  private getResetCodeValidTo(now = new Date()): Date {
+    const validTo = new Date(now);
+    validTo.setMinutes(validTo.getMinutes() + this.getResetCodeTtlMinutes());
+
+    return validTo;
+  }
+
+  private getResetCodeTtlMinutes(): number {
+    return Number(
+      this.configService.getOrThrow<string | number>(
+        'PASSWORD_RESET_CODE_TTL_MINUTES',
+      ),
+    );
   }
 
   private getTemplateFilePath(): string {
-    return join(__dirname, '..', 'templates', 'account-unlock.hbs');
+    return join(__dirname, '..', 'templates', 'password-reset.hbs');
   }
 }

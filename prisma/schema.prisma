@@ -38,6 +38,9 @@ model User {
   refreshTokenValidTo   DateTime?
   sessionUnlockedUntil  DateTime?
   accountUnlockCodeHash String?
+  passwordResetCodeHash String?
+  passwordResetCodeValidTo DateTime?
+  passwordResetIncorrectCounter Int @default(0)
   tenants               User_tenant[]
 }
 

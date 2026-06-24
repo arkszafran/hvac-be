@@ -7,6 +7,7 @@ import {
   AUTH_COOKIE_NAMES,
   AUTH_ERROR_CODES,
 } from '../authentication.constants';
+import { AuthenticationAccountStatusService } from '../authentication-account-status.service';
 import { AuthenticationSessionService } from '../authentication-session.service';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { RequestWithCookies } from '../authentication.types';
@@ -17,11 +18,14 @@ export class RefreshCommand {
     private readonly prisma: PrismaService,
     private readonly sessionService: AuthenticationSessionService,
     private readonly tokenService: AuthenticationTokenService,
+    private readonly accountStatusService: AuthenticationAccountStatusService,
   ) {}
 
   async execute(request: RequestWithCookies, response: Response) {
     const user =
       await this.sessionService.getUserWithValidRefreshToken(request);
+
+    await this.accountStatusService.throwIfBlocked(user);
 
     if (!user.sessionUnlockedUntil || user.sessionUnlockedUntil <= new Date()) {
       response.status(HttpStatus.LOCKED);

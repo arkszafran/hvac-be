@@ -8,7 +8,6 @@ export class JobsController {
 
   @Post('jobs')
   async handle(@Body() dto: JobDto): Promise<void> {
-    console.log('job received');
     const handler = this.registry.get(dto.type);
 
     await handler.handle(dto.payload);

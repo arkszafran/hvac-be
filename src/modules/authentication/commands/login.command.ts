@@ -6,6 +6,7 @@ import { apiError, apiSuccess } from '../../../common/types/api-response.type';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_ERROR_CODES } from '../authentication.constants';
+import { AuthenticationAccountStatusService } from '../authentication-account-status.service';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { LoginDto } from '../dto/login.dto';
 import { AuthenticationMailType } from '../mails/authentication-mail-type.enum';
@@ -17,6 +18,7 @@ export class LoginCommand {
     private readonly prisma: PrismaService,
     private readonly tokenService: AuthenticationTokenService,
     private readonly mailQueueService: AuthenticationMailQueueService,
+    private readonly accountStatusService: AuthenticationAccountStatusService,
   ) {}
 
   async execute(dto: LoginDto, response: Response) {
@@ -36,11 +38,7 @@ export class LoginCommand {
       throwInvalidCredentialsException();
     }
 
-    if (user.status === UserStatus.blocked) {
-      await this.queueAccountUnlockEmailIfNeeded(user);
-
-      throwLoginRetriesLimitReachedException();
-    }
+    await this.accountStatusService.throwIfBlocked(user);
 
     const loginRetriesNumber = this.tokenService.getLoginRetriesNumber();
 
@@ -99,20 +97,6 @@ export class LoginCommand {
     });
 
     return apiSuccess();
-  }
-
-  private async queueAccountUnlockEmailIfNeeded(user: {
-    readonly id: string;
-    readonly accountUnlockCodeHash: string | null;
-  }): Promise<void> {
-    if (user.accountUnlockCodeHash) {
-      return;
-    }
-
-    await this.mailQueueService.queueEmail({
-      userId: user.id,
-      type: AuthenticationMailType.ACCOUNT_UNLOCK,
-    });
   }
 }
 

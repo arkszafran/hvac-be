@@ -2,6 +2,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { UserRole, UserStatus } from '@generated/prisma/enums';
 import type { Response } from 'express';
 
+import { apiError } from '../../../common/types/api-response.type';
 import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_ERROR_CODES } from '../authentication.constants';
 import { AuthenticationMailType } from '../mails/authentication-mail-type.enum';
@@ -38,6 +39,9 @@ describe('LoginCommand', () => {
   let mailQueueService: {
     queueEmail: jest.Mock;
   };
+  let accountStatusService: {
+    throwIfBlocked: jest.Mock;
+  };
   let response: Response;
   let command: LoginCommand;
 
@@ -60,6 +64,13 @@ describe('LoginCommand', () => {
     mailQueueService = {
       queueEmail: jest.fn().mockResolvedValue('task-name'),
     };
+    accountStatusService = {
+      throwIfBlocked: jest.fn(async (user) => {
+        if (user.status === UserStatus.blocked) {
+          throwLoginRetriesLimitReachedException();
+        }
+      }),
+    };
     response = {} as Response;
     command = new LoginCommand(
       prisma as unknown as ConstructorParameters<typeof LoginCommand>[0],
@@ -67,6 +78,9 @@ describe('LoginCommand', () => {
       mailQueueService as unknown as ConstructorParameters<
         typeof LoginCommand
       >[2],
+      accountStatusService as unknown as ConstructorParameters<
+        typeof LoginCommand
+      >[3],
     );
 
     verifyPasswordMock.mockReset();
@@ -85,9 +99,10 @@ describe('LoginCommand', () => {
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
     expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
+    expect(accountStatusService.throwIfBlocked).not.toHaveBeenCalled();
   });
 
-  it('queues unlock email for blocked user without unlock code before throwing unauthorized', async () => {
+  it('checks blocked user status before verifying password', async () => {
     const user = createUser({
       status: UserStatus.blocked,
       incorrectLoginCounter: 3,
@@ -101,27 +116,7 @@ describe('LoginCommand', () => {
 
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
-    expect(mailQueueService.queueEmail).toHaveBeenCalledWith({
-      userId: user.id,
-      type: AuthenticationMailType.ACCOUNT_UNLOCK,
-    });
-  });
-
-  it('does not queue unlock email for blocked user with existing unlock code', async () => {
-    const user = createUser({
-      status: UserStatus.blocked,
-      incorrectLoginCounter: 3,
-      accountUnlockCodeHash: 'unlock-code-hash',
-    });
-    prisma.user.findFirst.mockResolvedValue(user);
-
-    await expectLoginRetriesLimitReached(
-      command.execute({ email: user.email, password: 'secret' }, response),
-    );
-
-    expect(verifyPasswordMock).not.toHaveBeenCalled();
-    expect(prisma.user.update).not.toHaveBeenCalled();
-    expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
+    expect(accountStatusService.throwIfBlocked).toHaveBeenCalledWith(user);
   });
 
   it('increments failed login counter and blocks user when limit is reached', async () => {
@@ -222,4 +217,13 @@ async function expectLoginRetriesLimitReached(
       },
     },
   });
+}
+
+function throwLoginRetriesLimitReachedException(): never {
+  throw new UnauthorizedException(
+    apiError({
+      code: AUTH_ERROR_CODES.loginRetriesLimitReached,
+      message: 'Login retries limit reached.',
+    }),
+  );
 }

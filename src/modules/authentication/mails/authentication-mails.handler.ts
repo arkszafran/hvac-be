@@ -8,6 +8,7 @@ import { Queue } from '../../../common/queues/queues.enum';
 import { AuthenticationMailType } from './authentication-mail-type.enum';
 import type { AuthEmailJobPayload } from './authentication-mail.types';
 import { AccountUnlockMailHandler } from './handlers/account-unlock-mail.handler';
+import { PasswordResetMailHandler } from './handlers/password-reset-mail.handler';
 
 @Injectable()
 export class AuthenticationMailsHandler
@@ -16,6 +17,7 @@ export class AuthenticationMailsHandler
   constructor(
     private readonly registry: JobsHandlersRegistry,
     private readonly accountUnlockMailHandler: AccountUnlockMailHandler,
+    private readonly passwordResetMailHandler: PasswordResetMailHandler,
   ) {}
 
   onModuleInit(): void {
@@ -26,6 +28,9 @@ export class AuthenticationMailsHandler
     switch (payload.type) {
       case AuthenticationMailType.ACCOUNT_UNLOCK:
         await this.accountUnlockMailHandler.handle(payload.userId);
+        return;
+      case AuthenticationMailType.PASSWORD_RESET:
+        await this.passwordResetMailHandler.handle(payload.userId);
         return;
       default:
         throw new BadRequestException('Unsupported authentication email type.');
