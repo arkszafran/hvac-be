@@ -84,8 +84,8 @@ src/modules/<feature>/
 - Controllers must invoke `CommandBus.execute()` for state-changing operations.
 - Controllers must invoke `QueryBus.execute()` for read operations.
 - Controllers may map route params, query params, body DTOs, and current user context into commands or queries.
-
-Example:
+- Controllers must be annotated by swagger decorators
+  Example:
 
 ```ts
 @Post()
@@ -108,6 +108,7 @@ findOne(@Param('id') id: string) {
 - Command handlers may call infrastructure repositories.
 - Command handlers may emit domain/application events.
 - Commands should be named with imperative intent, for example `CreateUserCommand`.
+- Command response should be always created using `src\common\types\api-response.type.ts`
 
 ## Queries
 
@@ -118,6 +119,7 @@ findOne(@Param('id') id: string) {
 - Query handlers may call read repositories or read models.
 - Queries should never modify state.
 - Queries should be named by intent, for example `GetUserByIdQuery`.
+- Query response should be always created using `src\common\types\api-response.type.ts`
 
 ## Infrastructure
 
@@ -197,10 +199,13 @@ new ValidationPipe({
 
 ## Agent safety rules
 
-- Do not modify `.env` files.
 - Do not commit secrets.
 - Do not modify generated Prisma Client files.
 - Do not modify migrations unless explicitly requested.
 - Do not introduce new architectural patterns without explaining why.
-- Prefer extending existing modules over creating duplicate modules.
 - Before large refactors, inspect nearby code and follow existing conventions.
+
+## Config
+
+- Always use ConfigService to access to .env variables
+- add validation of variables to `src/common/config/env.validation.ts`
