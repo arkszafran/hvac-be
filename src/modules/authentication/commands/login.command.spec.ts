@@ -4,6 +4,7 @@ import type { Response } from 'express';
 
 import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_ERROR_CODES } from '../authentication.constants';
+import { AuthenticationMailType } from '../mails/authentication-mail-type.enum';
 import { LoginCommand } from './login.command';
 
 jest.mock('../../../common/security/password/password', () => ({
@@ -34,6 +35,9 @@ describe('LoginCommand', () => {
     createAccessToken: jest.Mock;
     setAuthCookies: jest.Mock;
   };
+  let mailQueueService: {
+    queueEmail: jest.Mock;
+  };
   let response: Response;
   let command: LoginCommand;
 
@@ -53,10 +57,16 @@ describe('LoginCommand', () => {
       createAccessToken: jest.fn().mockResolvedValue('access-token'),
       setAuthCookies: jest.fn(),
     };
+    mailQueueService = {
+      queueEmail: jest.fn().mockResolvedValue('task-name'),
+    };
     response = {} as Response;
     command = new LoginCommand(
       prisma as unknown as ConstructorParameters<typeof LoginCommand>[0],
       tokenService as unknown as ConstructorParameters<typeof LoginCommand>[1],
+      mailQueueService as unknown as ConstructorParameters<
+        typeof LoginCommand
+      >[2],
     );
 
     verifyPasswordMock.mockReset();
@@ -74,12 +84,14 @@ describe('LoginCommand', () => {
 
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
   });
 
-  it('does not update blocked user before throwing unauthorized', async () => {
+  it('queues unlock email for blocked user without unlock code before throwing unauthorized', async () => {
     const user = createUser({
       status: UserStatus.blocked,
       incorrectLoginCounter: 3,
+      accountUnlockCodeHash: null,
     });
     prisma.user.findFirst.mockResolvedValue(user);
 
@@ -89,6 +101,27 @@ describe('LoginCommand', () => {
 
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(mailQueueService.queueEmail).toHaveBeenCalledWith({
+      userId: user.id,
+      type: AuthenticationMailType.ACCOUNT_UNLOCK,
+    });
+  });
+
+  it('does not queue unlock email for blocked user with existing unlock code', async () => {
+    const user = createUser({
+      status: UserStatus.blocked,
+      incorrectLoginCounter: 3,
+      accountUnlockCodeHash: 'unlock-code-hash',
+    });
+    prisma.user.findFirst.mockResolvedValue(user);
+
+    await expectLoginRetriesLimitReached(
+      command.execute({ email: user.email, password: 'secret' }, response),
+    );
+
+    expect(verifyPasswordMock).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
   });
 
   it('increments failed login counter and blocks user when limit is reached', async () => {
@@ -106,6 +139,10 @@ describe('LoginCommand', () => {
         incorrectLoginCounter: 3,
         status: UserStatus.blocked,
       },
+    });
+    expect(mailQueueService.queueEmail).toHaveBeenCalledWith({
+      userId: user.id,
+      type: AuthenticationMailType.ACCOUNT_UNLOCK,
     });
   });
 
@@ -140,6 +177,7 @@ describe('LoginCommand', () => {
       refreshToken: 'refresh-token',
       userId: user.id,
     });
+    expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
   });
 });
 
@@ -151,6 +189,7 @@ function createUser(
     status: UserStatus;
     incorrectLoginCounter: number;
     incorrectPINCounter: number;
+    accountUnlockCodeHash: string | null;
   }> = {},
 ) {
   return {
@@ -161,6 +200,7 @@ function createUser(
     status: overrides.status ?? UserStatus.active,
     incorrectLoginCounter: overrides.incorrectLoginCounter ?? 0,
     incorrectPINCounter: overrides.incorrectPINCounter ?? 0,
+    accountUnlockCodeHash: overrides.accountUnlockCodeHash ?? null,
     tenants: [],
   };
 }

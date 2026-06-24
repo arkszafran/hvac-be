@@ -1,14 +1,17 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   Res,
 } from '@nestjs/common';
 import {
   ApiBody,
+  ApiBadRequestResponse,
   ApiCookieAuth,
   ApiExtraModels,
   ApiOkResponse,
@@ -24,6 +27,7 @@ import { LoginCommand } from './commands/login.command';
 import { LogoutCommand } from './commands/logout.command';
 import { PinLoginCommand } from './commands/pin-login.command';
 import { RefreshCommand } from './commands/refresh.command';
+import { UnlockAccountCommand } from './commands/unlock-account.command';
 import { AUTH_COOKIE_NAMES } from './authentication.constants';
 import {
   AuthenticationErrorResponseDto,
@@ -33,6 +37,7 @@ import {
 } from './dto/authentication-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { PinLoginDto } from './dto/pin-login.dto';
+import { UnlockAccountDto } from './dto/unlock-account.dto';
 import type { RequestWithCookies } from './authentication.types';
 
 @ApiTags('authentication')
@@ -48,6 +53,7 @@ export class AuthenticationController {
     private readonly refreshCommand: RefreshCommand,
     private readonly logoutCommand: LogoutCommand,
     private readonly pinLoginCommand: PinLoginCommand,
+    private readonly unlockAccountCommand: UnlockAccountCommand,
   ) {}
 
   @Post('login')
@@ -137,5 +143,20 @@ export class AuthenticationController {
     @Res({ passthrough: true }) response: Response,
   ) {
     return this.pinLoginCommand.execute(dto, request, response);
+  }
+
+  @Get('account-unlock')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Unlock blocked account with email code' })
+  @ApiOkResponse({
+    type: AuthenticationSuccessResponseDto,
+    description: 'Account was unlocked.',
+  })
+  @ApiBadRequestResponse({
+    type: AuthenticationErrorResponseDto,
+    description: 'Account unlock code is missing or invalid.',
+  })
+  unlockAccount(@Query() dto: UnlockAccountDto) {
+    return this.unlockAccountCommand.execute(dto);
   }
 }

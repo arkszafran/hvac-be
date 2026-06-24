@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CloudTasksClient, protos } from '@google-cloud/tasks';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class QueueService {
+  private readonly logger = new Logger(QueueService.name);
   private readonly client: CloudTasksClient;
 
   constructor(private readonly configService: ConfigService) {
@@ -43,6 +44,10 @@ export class QueueService {
       parent,
       task,
     });
+
+    this.logger.log(
+      `Queued task${response.name ? ` ${response.name}` : ''} for ${input.queueName}.`,
+    );
 
     return response.name ?? undefined;
   }

@@ -11,6 +11,7 @@ export function validateEnvironment(
 
   assertRequiredString(config, 'JWT_ACCESS_SECRET');
   assertRequiredString(config, 'FRONTEND_ORIGIN');
+  assertRequiredUrl(config, 'BE_BASE_URL');
   assertRequiredString(config, 'COOKIE_SAME_SITE');
   assertRequiredString(config, 'COOKIE_SECURE');
   assertPositiveInteger(config, 'ACCESS_TOKEN_TTL_MINUTES');
@@ -57,6 +58,20 @@ function assertSmtpUrl(config: Record<string, unknown>, key: string): void {
 
   if (url.port && !Number.isInteger(Number(url.port))) {
     throw new Error(`${key} env port must be an integer.`);
+  }
+}
+
+function assertRequiredUrl(config: Record<string, unknown>, key: string): void {
+  const value = config[key];
+
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${key} env is required.`);
+  }
+
+  try {
+    new URL(value);
+  } catch {
+    throw new Error(`${key} env must be a valid URL.`);
   }
 }
 

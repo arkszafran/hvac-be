@@ -8,12 +8,15 @@ import { verifyPassword } from '../../../common/security/password/password';
 import { AUTH_ERROR_CODES } from '../authentication.constants';
 import { AuthenticationTokenService } from '../authentication-token.service';
 import type { LoginDto } from '../dto/login.dto';
+import { AuthenticationMailType } from '../mails/authentication-mail-type.enum';
+import { AuthenticationMailQueueService } from '../mails/authentication-mail-queue.service';
 
 @Injectable()
 export class LoginCommand {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tokenService: AuthenticationTokenService,
+    private readonly mailQueueService: AuthenticationMailQueueService,
   ) {}
 
   async execute(dto: LoginDto, response: Response) {
@@ -34,6 +37,8 @@ export class LoginCommand {
     }
 
     if (user.status === UserStatus.blocked) {
+      await this.queueAccountUnlockEmailIfNeeded(user);
+
       throwLoginRetriesLimitReachedException();
     }
 
@@ -56,6 +61,11 @@ export class LoginCommand {
       });
 
       if (incorrectLoginCounter >= loginRetriesNumber) {
+        await this.mailQueueService.queueEmail({
+          userId: user.id,
+          type: AuthenticationMailType.ACCOUNT_UNLOCK,
+        });
+
         throwLoginRetriesLimitReachedException();
       }
 
@@ -89,6 +99,20 @@ export class LoginCommand {
     });
 
     return apiSuccess();
+  }
+
+  private async queueAccountUnlockEmailIfNeeded(user: {
+    readonly id: string;
+    readonly accountUnlockCodeHash: string | null;
+  }): Promise<void> {
+    if (user.accountUnlockCodeHash) {
+      return;
+    }
+
+    await this.mailQueueService.queueEmail({
+      userId: user.id,
+      type: AuthenticationMailType.ACCOUNT_UNLOCK,
+    });
   }
 }
 

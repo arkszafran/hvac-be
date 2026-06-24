@@ -37,6 +37,7 @@ model User {
   refreshTokenHash      String?
   refreshTokenValidTo   DateTime?
   sessionUnlockedUntil  DateTime?
+  accountUnlockCodeHash String?
   tenants               User_tenant[]
 }
 
