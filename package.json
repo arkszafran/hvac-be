@@ -44,6 +44,7 @@
     "cookie-parser": "^1.4.7",
     "handlebars": "^4.7.9",
     "helmet": "^8.2.0",
+    "google-auth-library": "10.5.0",
     "nodemailer": "^9.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

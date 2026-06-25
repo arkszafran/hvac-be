@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { CloudTasksClient, protos } from '@google-cloud/tasks';
 import { ConfigService } from '@nestjs/config';
 
@@ -21,15 +21,26 @@ export class QueueService {
     const baseUrl = this.configService.getOrThrow<string>(
       'PUBLIC_WORKER_BASE_URL',
     );
+    const serviceAccountEmail = this.configService.getOrThrow<string>(
+      'QUEUE_JOBS_OIDC_SERVICE_ACCOUNT_EMAIL',
+    );
+    const audience = this.configService.getOrThrow<string>(
+      'QUEUE_JOBS_OIDC_AUDIENCE',
+    );
 
     const parent = this.client.queuePath(projectId, location, input.queueName);
+    const url = `${baseUrl}/queues/jobs`;
 
     const task: protos.google.cloud.tasks.v2.ITask = {
       httpRequest: {
         httpMethod: 'POST',
-        url: `${baseUrl}/queues/jobs`,
+        url,
         headers: {
           'Content-Type': 'application/json',
+        },
+        oidcToken: {
+          serviceAccountEmail,
+          audience,
         },
         body: Buffer.from(
           JSON.stringify({
@@ -40,10 +51,21 @@ export class QueueService {
       },
     };
 
-    const [response] = await this.client.createTask({
-      parent,
-      task,
-    });
+    let response: protos.google.cloud.tasks.v2.ITask;
+
+    try {
+      [response] = await this.client.createTask({
+        parent,
+        task,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Queue task creation failed for parent "${parent}", url "${url}", OIDC service account "${serviceAccountEmail}", audience "${audience}".`,
+        error instanceof Error ? error.stack : undefined,
+      );
+
+      throw new ServiceUnavailableException('Queue task could not be created.');
+    }
 
     this.logger.log(
       `Queued task${response.name ? ` ${response.name}` : ''} for ${input.queueName}.`,

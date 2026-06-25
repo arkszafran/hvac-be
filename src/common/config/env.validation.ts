@@ -22,6 +22,11 @@ export function validateEnvironment(
   assertPositiveInteger(config, 'LOGIN_RETRIES_NUMBER');
   assertPositiveInteger(config, 'PASSWORD_RESET_CODE_TTL_MINUTES');
   assertPositiveInteger(config, 'PASSWORD_RESET_CODE_RETRIES_NUMBER');
+  assertRequiredString(config, 'GCP_PROJECT_ID');
+  assertRequiredString(config, 'GCP_LOCATION');
+  assertRequiredUrl(config, 'PUBLIC_WORKER_BASE_URL');
+  assertRequiredString(config, 'QUEUE_JOBS_OIDC_SERVICE_ACCOUNT_EMAIL');
+  assertRequiredUrl(config, 'QUEUE_JOBS_OIDC_AUDIENCE');
   assertOptionalBoolean(config, 'SWAGGER_ON');
   assertSmtpUrl(config, 'SMTP_URL');
   assertRequiredString(config, 'SMTP_USER');
