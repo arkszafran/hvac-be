@@ -209,3 +209,7 @@ new ValidationPipe({
 
 - Always use ConfigService to access to .env variables
 - add validation of variables to `src/common/config/env.validation.ts`
+
+## Guards
+
+- Always import guards (AuthGuard, RoleAuthGuard, TenantGuard) using alias '@auth';

@@ -1,8 +1,4 @@
-export const AUTH_COOKIE_NAMES = {
-  accessToken: 'authToken',
-  refreshToken: 'refreshToken',
-  userId: 'userId',
-} as const;
+export { AUTH_COOKIE_NAMES } from '../../common/security/auth/auth.constants';
 
 export const AUTH_ERROR_CODES = {
   invalidCredentials: 'INVALID_CREDENTIALS',

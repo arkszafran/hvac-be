@@ -24,6 +24,12 @@
     "paths": {
       "@generated/*": [
         "generated/*"
+      ],
+      "@auth": [
+        "src/common/security/auth"
+      ],
+      "@auth/*": [
+        "src/common/security/auth/*"
       ]
     }
   }
