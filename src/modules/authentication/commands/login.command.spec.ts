@@ -25,6 +25,7 @@ describe('LoginCommand', () => {
     user: {
       findFirst: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
   };
   let tokenService: {
@@ -50,6 +51,7 @@ describe('LoginCommand', () => {
       user: {
         findFirst: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
     tokenService = {
@@ -98,6 +100,7 @@ describe('LoginCommand', () => {
 
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
     expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
     expect(accountStatusService.throwIfBlocked).not.toHaveBeenCalled();
   });
@@ -116,12 +119,19 @@ describe('LoginCommand', () => {
 
     expect(verifyPasswordMock).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
     expect(accountStatusService.throwIfBlocked).toHaveBeenCalledWith(user);
   });
 
   it('increments failed login counter and blocks user when limit is reached', async () => {
     const user = createUser({ incorrectLoginCounter: 2 });
     prisma.user.findFirst.mockResolvedValue(user);
+    prisma.user.update.mockResolvedValue({
+      id: user.id,
+      accountUnlockCodeHash: null,
+      incorrectLoginCounter: 3,
+    });
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
     verifyPasswordMock.mockResolvedValue(false);
 
     await expectLoginRetriesLimitReached(
@@ -131,7 +141,24 @@ describe('LoginCommand', () => {
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: user.id },
       data: {
-        incorrectLoginCounter: 3,
+        incorrectLoginCounter: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        accountUnlockCodeHash: true,
+        incorrectLoginCounter: true,
+      },
+    });
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: user.id,
+        status: {
+          not: UserStatus.blocked,
+        },
+      },
+      data: {
         status: UserStatus.blocked,
       },
     });
@@ -139,6 +166,24 @@ describe('LoginCommand', () => {
       userId: user.id,
       type: AuthenticationMailType.ACCOUNT_UNLOCK,
     });
+  });
+
+  it('does not queue unlock email when concurrent request already blocked user', async () => {
+    const user = createUser({ incorrectLoginCounter: 2 });
+    prisma.user.findFirst.mockResolvedValue(user);
+    prisma.user.update.mockResolvedValue({
+      id: user.id,
+      accountUnlockCodeHash: null,
+      incorrectLoginCounter: 3,
+    });
+    prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    verifyPasswordMock.mockResolvedValue(false);
+
+    await expectLoginRetriesLimitReached(
+      command.execute({ email: user.email, password: 'wrong' }, response),
+    );
+
+    expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
   });
 
   it('creates tokens, stores refresh hash, resets counters and sets cookies on successful login', async () => {

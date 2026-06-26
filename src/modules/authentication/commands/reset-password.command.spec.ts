@@ -20,6 +20,7 @@ describe('ResetPasswordCommand', () => {
     user: {
       findUnique: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
   };
   let tokenService: {
@@ -41,6 +42,7 @@ describe('ResetPasswordCommand', () => {
       user: {
         findUnique: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
     tokenService = {
@@ -120,6 +122,11 @@ describe('ResetPasswordCommand', () => {
       passwordResetCodeValidTo: futureDate(),
       passwordResetIncorrectCounter: 1,
     });
+    prisma.user.update.mockResolvedValue({
+      id: 'user-id',
+      accountUnlockCodeHash: null,
+      passwordResetIncorrectCounter: 2,
+    });
     tokenService.verifyToken.mockResolvedValue(false);
 
     await expectInvalidPasswordResetCode(command.execute(createDto()));
@@ -131,9 +138,17 @@ describe('ResetPasswordCommand', () => {
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 'user-id' },
       data: {
-        passwordResetIncorrectCounter: 2,
+        passwordResetIncorrectCounter: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        accountUnlockCodeHash: true,
+        passwordResetIncorrectCounter: true,
       },
     });
+    expect(prisma.user.updateMany).not.toHaveBeenCalled();
     expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
   });
 
@@ -146,15 +161,25 @@ describe('ResetPasswordCommand', () => {
       passwordResetCodeValidTo: futureDate(),
       passwordResetIncorrectCounter: 2,
     });
+    prisma.user.update.mockResolvedValue({
+      id: 'user-id',
+      accountUnlockCodeHash: null,
+      passwordResetIncorrectCounter: 3,
+    });
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
     tokenService.verifyToken.mockResolvedValue(false);
 
     await expectInvalidPasswordResetCode(command.execute(createDto()));
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'user-id' },
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: 'user-id',
+        status: {
+          not: UserStatus.blocked,
+        },
+      },
       data: {
         status: UserStatus.blocked,
-        passwordResetIncorrectCounter: 3,
         passwordResetCodeHash: null,
         passwordResetCodeValidTo: null,
         refreshTokenHash: null,
@@ -166,6 +191,28 @@ describe('ResetPasswordCommand', () => {
       userId: 'user-id',
       type: AuthenticationMailType.ACCOUNT_UNLOCK,
     });
+  });
+
+  it('does not queue unlock email when concurrent request already blocked user', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-id',
+      status: UserStatus.active,
+      accountUnlockCodeHash: null,
+      passwordResetCodeHash: 'reset-code-hash',
+      passwordResetCodeValidTo: futureDate(),
+      passwordResetIncorrectCounter: 2,
+    });
+    prisma.user.update.mockResolvedValue({
+      id: 'user-id',
+      accountUnlockCodeHash: null,
+      passwordResetIncorrectCounter: 3,
+    });
+    prisma.user.updateMany.mockResolvedValue({ count: 0 });
+    tokenService.verifyToken.mockResolvedValue(false);
+
+    await expectInvalidPasswordResetCode(command.execute(createDto()));
+
+    expect(mailQueueService.queueEmail).not.toHaveBeenCalled();
   });
 
   it('updates password and clears authentication state when reset code is valid', async () => {

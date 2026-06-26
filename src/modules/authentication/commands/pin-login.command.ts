@@ -39,13 +39,26 @@ export class PinLoginCommand {
       : false;
 
     if (!isPinValid) {
-      const incorrectPINCounter = user.incorrectPINCounter + 1;
+      const updatedUser = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          incorrectPINCounter: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+          incorrectPINCounter: true,
+        },
+      });
 
-      if (incorrectPINCounter >= this.tokenService.getPinRetriesNumber()) {
+      if (
+        updatedUser.incorrectPINCounter >=
+        this.tokenService.getPinRetriesNumber()
+      ) {
         await this.prisma.user.update({
-          where: { id: user.id },
+          where: { id: updatedUser.id },
           data: {
-            incorrectPINCounter,
             refreshTokenHash: null,
             refreshTokenValidTo: null,
           },
@@ -62,13 +75,6 @@ export class PinLoginCommand {
           },
         });
       }
-
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          incorrectPINCounter,
-        },
-      });
 
       throwInvalidPinException();
     }

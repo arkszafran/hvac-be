@@ -13,5 +13,8 @@ export const AUTH_ERROR_CODES = {
   loginRequired: 'LOGIN_REQUIRED',
   loginRetriesLimitReached: 'LOGIN_RETRIES_LIMIT_REACHED',
   invalidAccountUnlockCode: 'INVALID_ACCOUNT_UNLOCK_CODE',
+  accountUnlockCodeExpired: 'ACCOUNT_UNLOCK_CODE_EXPIRED',
+  accountUnlockCodeRetriesLimitReached:
+    'ACCOUNT_UNLOCK_CODE_RETRIES_LIMIT_REACHED',
   invalidPasswordResetCode: 'INVALID_PASSWORD_RESET_CODE',
 } as const;

@@ -80,33 +80,41 @@ export class ResetPasswordCommand {
 
   private async handleInvalidResetCode(user: {
     readonly id: string;
-    readonly accountUnlockCodeHash: string | null;
-    readonly passwordResetIncorrectCounter: number;
   }): Promise<void> {
     const passwordResetRetriesNumber = Number(
       this.configService.getOrThrow<string | number>(
         'PASSWORD_RESET_CODE_RETRIES_NUMBER',
       ),
     );
-    const passwordResetIncorrectCounter =
-      user.passwordResetIncorrectCounter + 1;
-
-    if (passwordResetIncorrectCounter < passwordResetRetriesNumber) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          passwordResetIncorrectCounter,
+    const updatedUser = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetIncorrectCounter: {
+          increment: 1,
         },
-      });
+      },
+      select: {
+        id: true,
+        accountUnlockCodeHash: true,
+        passwordResetIncorrectCounter: true,
+      },
+    });
 
+    if (
+      updatedUser.passwordResetIncorrectCounter < passwordResetRetriesNumber
+    ) {
       return;
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
+    const blockResult = await this.prisma.user.updateMany({
+      where: {
+        id: updatedUser.id,
+        status: {
+          not: UserStatus.blocked,
+        },
+      },
       data: {
         status: UserStatus.blocked,
-        passwordResetIncorrectCounter,
         passwordResetCodeHash: null,
         passwordResetCodeValidTo: null,
         refreshTokenHash: null,
@@ -115,9 +123,9 @@ export class ResetPasswordCommand {
       },
     });
 
-    if (!user.accountUnlockCodeHash) {
+    if (blockResult.count > 0 && !updatedUser.accountUnlockCodeHash) {
       await this.mailQueueService.queueEmail({
-        userId: user.id,
+        userId: updatedUser.id,
         type: AuthenticationMailType.ACCOUNT_UNLOCK,
       });
     }

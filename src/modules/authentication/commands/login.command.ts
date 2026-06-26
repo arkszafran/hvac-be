@@ -45,24 +45,39 @@ export class LoginCommand {
     const isPasswordValid = await verifyPassword(dto.password, user.password);
 
     if (!isPasswordValid) {
-      const incorrectLoginCounter = user.incorrectLoginCounter + 1;
-
-      await this.prisma.user.update({
+      const updatedUser = await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          incorrectLoginCounter,
-          status:
-            incorrectLoginCounter >= loginRetriesNumber
-              ? UserStatus.blocked
-              : user.status,
+          incorrectLoginCounter: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+          accountUnlockCodeHash: true,
+          incorrectLoginCounter: true,
         },
       });
 
-      if (incorrectLoginCounter >= loginRetriesNumber) {
-        await this.mailQueueService.queueEmail({
-          userId: user.id,
-          type: AuthenticationMailType.ACCOUNT_UNLOCK,
+      if (updatedUser.incorrectLoginCounter >= loginRetriesNumber) {
+        const blockResult = await this.prisma.user.updateMany({
+          where: {
+            id: updatedUser.id,
+            status: {
+              not: UserStatus.blocked,
+            },
+          },
+          data: {
+            status: UserStatus.blocked,
+          },
         });
+
+        if (blockResult.count > 0 && !updatedUser.accountUnlockCodeHash) {
+          await this.mailQueueService.queueEmail({
+            userId: updatedUser.id,
+            type: AuthenticationMailType.ACCOUNT_UNLOCK,
+          });
+        }
 
         throwLoginRetriesLimitReachedException();
       }

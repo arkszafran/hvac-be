@@ -101,6 +101,10 @@ describe('PinLoginCommand', () => {
   it('increments PIN counter and throws unauthorized when PIN is invalid below limit', async () => {
     const user = createUser({ incorrectPINCounter: 1 });
     sessionService.getUserWithValidRefreshToken.mockResolvedValue(user);
+    prisma.user.update.mockResolvedValue({
+      id: user.id,
+      incorrectPINCounter: 2,
+    });
     verifyPasswordMock.mockResolvedValue(false);
 
     await expect(
@@ -110,7 +114,13 @@ describe('PinLoginCommand', () => {
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: user.id },
       data: {
-        incorrectPINCounter: 2,
+        incorrectPINCounter: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        incorrectPINCounter: true,
       },
     });
   });
@@ -118,6 +128,10 @@ describe('PinLoginCommand', () => {
   it('clears refresh token and returns login redirect when invalid PIN reaches limit', async () => {
     const user = createUser({ incorrectPINCounter: 2 });
     sessionService.getUserWithValidRefreshToken.mockResolvedValue(user);
+    prisma.user.update.mockResolvedValueOnce({
+      id: user.id,
+      incorrectPINCounter: 3,
+    });
     verifyPasswordMock.mockResolvedValue(false);
 
     await expect(
@@ -133,10 +147,21 @@ describe('PinLoginCommand', () => {
       },
     });
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
+    expect(prisma.user.update).toHaveBeenNthCalledWith(1, {
       where: { id: user.id },
       data: {
-        incorrectPINCounter: 3,
+        incorrectPINCounter: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        incorrectPINCounter: true,
+      },
+    });
+    expect(prisma.user.update).toHaveBeenNthCalledWith(2, {
+      where: { id: user.id },
+      data: {
         refreshTokenHash: null,
         refreshTokenValidTo: null,
       },

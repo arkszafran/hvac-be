@@ -1,11 +1,9 @@
 import {
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Post,
-  Query,
   Req,
   Res,
 } from '@nestjs/common';
@@ -151,9 +149,10 @@ export class AuthenticationController {
     return this.pinLoginCommand.execute(dto, request, response);
   }
 
-  @Get('account-unlock')
+  @Post('account-unlock')
   @HttpCode(200)
   @ApiOperation({ summary: 'Unlock blocked account with email code' })
+  @ApiBody({ type: UnlockAccountDto })
   @ApiOkResponse({
     type: AuthenticationSuccessResponseDto,
     description: 'Account was unlocked.',
@@ -162,7 +161,7 @@ export class AuthenticationController {
     type: AuthenticationErrorResponseDto,
     description: 'Account unlock code is missing or invalid.',
   })
-  unlockAccount(@Query() dto: UnlockAccountDto) {
+  unlockAccount(@Body() dto: UnlockAccountDto) {
     return this.unlockAccountCommand.execute(dto);
   }
 

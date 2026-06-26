@@ -54,9 +54,11 @@ async function bootstrap() {
 void bootstrap();
 
 function getCorsOrigins(configService: ConfigService): string[] {
-  const frontendOrigin = configService.getOrThrow<string>('FRONTEND_ORIGIN');
+  const allowedBrowserOrigins = configService.getOrThrow<string>(
+    'ALLOWED_BROWSER_ORIGINS',
+  );
 
-  return frontendOrigin
+  return allowedBrowserOrigins
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);

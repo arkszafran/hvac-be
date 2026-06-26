@@ -10,8 +10,9 @@ export function validateEnvironment(
   );
 
   assertRequiredString(config, 'JWT_ACCESS_SECRET');
-  assertRequiredString(config, 'FRONTEND_ORIGIN');
+  assertRequiredUrl(config, 'FRONTEND_TENANT_ORIGIN');
   assertRequiredUrl(config, 'BE_BASE_URL');
+  assertRequiredUrlList(config, 'ALLOWED_BROWSER_ORIGINS');
   assertRequiredString(config, 'COOKIE_SAME_SITE');
   assertRequiredString(config, 'COOKIE_SECURE');
   assertPositiveInteger(config, 'ACCESS_TOKEN_TTL_MINUTES');
@@ -20,6 +21,8 @@ export function validateEnvironment(
   assertPositiveInteger(config, 'SESSION_DURATION_HOURS');
   assertPositiveInteger(config, 'PIN_RETRIES_NUMBER');
   assertPositiveInteger(config, 'LOGIN_RETRIES_NUMBER');
+  assertPositiveInteger(config, 'ACCOUNT_UNLOCK_CODE_TTL_MINUTES');
+  assertPositiveInteger(config, 'ACCOUNT_UNLOCK_CODE_RETRIES_NUMBER');
   assertPositiveInteger(config, 'PASSWORD_RESET_CODE_TTL_MINUTES');
   assertPositiveInteger(config, 'PASSWORD_RESET_CODE_RETRIES_NUMBER');
   assertRequiredString(config, 'GCP_PROJECT_ID');
@@ -27,6 +30,8 @@ export function validateEnvironment(
   assertRequiredUrl(config, 'PUBLIC_WORKER_BASE_URL');
   assertRequiredString(config, 'QUEUE_JOBS_OIDC_SERVICE_ACCOUNT_EMAIL');
   assertRequiredUrl(config, 'QUEUE_JOBS_OIDC_AUDIENCE');
+  assertPositiveInteger(config, 'THROTTLE_TTL_MS');
+  assertPositiveInteger(config, 'THROTTLE_LIMIT');
   assertOptionalBoolean(config, 'SWAGGER_ON');
   assertSmtpUrl(config, 'SMTP_URL');
   assertRequiredString(config, 'SMTP_USER');
@@ -79,6 +84,34 @@ function assertRequiredUrl(config: Record<string, unknown>, key: string): void {
     new URL(value);
   } catch {
     throw new Error(`${key} env must be a valid URL.`);
+  }
+}
+
+function assertRequiredUrlList(
+  config: Record<string, unknown>,
+  key: string,
+): void {
+  const value = config[key];
+
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${key} env is required.`);
+  }
+
+  const urls = value
+    .split(',')
+    .map((url) => url.trim())
+    .filter(Boolean);
+
+  if (!urls.length) {
+    throw new Error(`${key} env must contain at least one URL.`);
+  }
+
+  for (const url of urls) {
+    try {
+      new URL(url);
+    } catch {
+      throw new Error(`${key} env must contain only valid URLs.`);
+    }
   }
 }
 

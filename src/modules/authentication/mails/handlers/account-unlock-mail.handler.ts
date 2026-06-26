@@ -34,11 +34,14 @@ export class AccountUnlockMailHandler {
 
     const code = this.createUnlockCode();
     const accountUnlockCodeHash = await this.tokenService.hashToken(code);
+    const accountUnlockCodeValidTo = this.getUnlockCodeValidTo();
 
     await this.prisma.user.update({
       where: { id: user.id },
       data: {
         accountUnlockCodeHash,
+        accountUnlockCodeValidTo,
+        accountUnlockIncorrectCounter: 0,
       },
     });
 
@@ -57,9 +60,24 @@ export class AccountUnlockMailHandler {
     return randomBytes(ACCOUNT_UNLOCK_CODE_BYTES).toString('base64url');
   }
 
+  private getUnlockCodeValidTo(now = new Date()): Date {
+    const validTo = new Date(now);
+    validTo.setMinutes(validTo.getMinutes() + this.getUnlockCodeTtlMinutes());
+
+    return validTo;
+  }
+
+  private getUnlockCodeTtlMinutes(): number {
+    return Number(
+      this.configService.getOrThrow<string | number>(
+        'ACCOUNT_UNLOCK_CODE_TTL_MINUTES',
+      ),
+    );
+  }
+
   private getUnlockUrl(userId: string, code: string): string {
     const baseUrl = this.configService
-      .getOrThrow<string>('FRONTEND_ORIGIN')
+      .getOrThrow<string>('FRONTEND_TENANT_ORIGIN')
       .replace(/\/$/, '');
     const params = new URLSearchParams({
       userId,

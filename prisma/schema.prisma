@@ -38,6 +38,8 @@ model User {
   refreshTokenValidTo   DateTime?
   sessionUnlockedUntil  DateTime?
   accountUnlockCodeHash String?
+  accountUnlockCodeValidTo DateTime?
+  accountUnlockIncorrectCounter Int @default(0)
   passwordResetCodeHash String?
   passwordResetCodeValidTo DateTime?
   passwordResetIncorrectCounter Int @default(0)

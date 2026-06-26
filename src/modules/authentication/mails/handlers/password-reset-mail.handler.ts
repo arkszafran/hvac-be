@@ -63,7 +63,7 @@ export class PasswordResetMailHandler {
 
   private getResetUrl(userId: string, code: string): string {
     const baseUrl = this.configService
-      .getOrThrow<string>('FRONTEND_ORIGIN')
+      .getOrThrow<string>('FRONTEND_TENANT_ORIGIN')
       .replace(/\/$/, '');
     const params = new URLSearchParams({
       userId,
