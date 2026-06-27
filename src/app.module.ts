@@ -8,6 +8,8 @@ import { validateEnvironment } from './common/config/env.validation';
 import { QueuesModule } from './common/queues/queues.module';
 import { AuthenticationModule } from './modules/authentication/authentication.module';
 import { OriginGuard } from './common/security/origin/origin.guard';
+import { UsersModule } from './modules/users/users.module';
+import { AuthSecurityModule } from '@auth';
 
 @Module({
   imports: [
@@ -24,8 +26,10 @@ import { OriginGuard } from './common/security/origin/origin.guard';
         limit: Number(process.env.THROTTLE_LIMIT),
       },
     ]),
+    AuthSecurityModule,
     QueuesModule,
     AuthenticationModule,
+    UsersModule,
   ],
   providers: [
     {

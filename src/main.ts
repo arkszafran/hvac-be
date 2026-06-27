@@ -80,6 +80,7 @@ function setupSwagger(app: INestApplication, enabled: boolean): void {
     .setDescription('HVAC backend API')
     .setVersion('1.0')
     .addTag('authentication')
+    .addTag('users')
     .addCookieAuth(
       AUTH_COOKIE_NAMES.accessToken,
       undefined,

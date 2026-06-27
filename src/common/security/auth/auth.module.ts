@@ -7,6 +7,6 @@ import { AuthGuard, RoleAuthGuard, TenantGuard } from './guards';
 @Module({
   imports: [PrismaModule, JwtModule.register({})],
   providers: [AuthGuard, RoleAuthGuard, TenantGuard],
-  exports: [AuthGuard, RoleAuthGuard, TenantGuard],
+  exports: [JwtModule, AuthGuard, RoleAuthGuard, TenantGuard],
 })
 export class AuthSecurityModule {}
