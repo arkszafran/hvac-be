@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
   Req,
   Res,
 } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
 import {
   ApiBody,
   ApiBadRequestResponse,
@@ -32,6 +34,7 @@ import { AUTH_COOKIE_NAMES } from './authentication.constants';
 import {
   AuthenticationErrorResponseDto,
   AuthenticationRedirectErrorResponseDto,
+  AuthenticationSessionResponseDto,
   AuthenticationSuccessResponseDto,
   LoginRetriesLimitReachedResponseDto,
 } from './dto/authentication-response.dto';
@@ -40,6 +43,7 @@ import { PinLoginDto } from './dto/pin-login.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UnlockAccountDto } from './dto/unlock-account.dto';
+import { GetSessionQuery } from './queries/impl/get-session.query';
 import type { RequestWithCookies } from './authentication.types';
 
 @ApiTags('authentication')
@@ -51,6 +55,7 @@ import type { RequestWithCookies } from './authentication.types';
 @Controller('authentication')
 export class AuthenticationController {
   constructor(
+    private readonly queryBus: QueryBus,
     private readonly loginCommand: LoginCommand,
     private readonly refreshCommand: RefreshCommand,
     private readonly logoutCommand: LogoutCommand,
@@ -59,6 +64,28 @@ export class AuthenticationController {
     private readonly requestPasswordResetCommand: RequestPasswordResetCommand,
     private readonly resetPasswordCommand: ResetPasswordCommand,
   ) {}
+
+  @Get('session')
+  @ApiOperation({ summary: 'Get current authenticated user session' })
+  @ApiCookieAuth(AUTH_COOKIE_NAMES.accessToken)
+  @ApiCookieAuth(AUTH_COOKIE_NAMES.refreshToken)
+  @ApiCookieAuth(AUTH_COOKIE_NAMES.userId)
+  @ApiOkResponse({
+    type: AuthenticationSessionResponseDto,
+    description: 'Current user session was returned.',
+  })
+  @ApiResponse({
+    status: HttpStatus.LOCKED,
+    type: AuthenticationRedirectErrorResponseDto,
+    description: 'PIN login is required before restoring the session.',
+  })
+  @ApiUnauthorizedResponse({
+    type: AuthenticationErrorResponseDto,
+    description: 'Authentication token is missing, invalid, or expired.',
+  })
+  session(@Req() request: RequestWithCookies) {
+    return this.queryBus.execute(new GetSessionQuery(request));
+  }
 
   @Post('login')
   @HttpCode(200)

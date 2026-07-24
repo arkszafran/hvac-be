@@ -89,9 +89,7 @@ describe('ResetPasswordCommand', () => {
       passwordResetIncorrectCounter: 0,
     });
 
-    await expectInvalidPasswordResetCode(
-      command.execute(createDto()),
-    );
+    await expectInvalidPasswordResetCode(command.execute(createDto()));
 
     expect(tokenService.verifyToken).not.toHaveBeenCalled();
     expect(prisma.user.update).not.toHaveBeenCalled();

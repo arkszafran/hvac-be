@@ -36,8 +36,7 @@ export class UnlockAccountCommand {
     }
 
     if (
-      user.accountUnlockIncorrectCounter >=
-      this.getAccountUnlockRetriesNumber()
+      user.accountUnlockIncorrectCounter >= this.getAccountUnlockRetriesNumber()
     ) {
       throwAccountUnlockRetriesLimitReachedException();
     }

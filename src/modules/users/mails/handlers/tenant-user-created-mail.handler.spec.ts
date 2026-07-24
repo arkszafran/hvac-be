@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { MailService } from '../../../../common/mail/mail.service';
+import type { SendEmailInput } from '../../../../common/mail/mail.types';
 import { PrismaService } from '../../../../common/prisma/prisma.service';
 import { TenantUserCreatedMailHandler } from './tenant-user-created-mail.handler';
 
@@ -10,13 +11,17 @@ jest.mock('../../../../common/prisma/prisma.service', () => ({
 }));
 
 describe('TenantUserCreatedMailHandler', () => {
+  type SendEmailMock = jest.MockedFunction<
+    (input: SendEmailInput) => Promise<void>
+  >;
+
   let prisma: {
     user: {
       findUnique: jest.Mock;
     };
   };
   let mailService: {
-    sendEmail: jest.Mock;
+    sendEmail: SendEmailMock;
   };
   let configService: {
     getOrThrow: jest.Mock;
@@ -30,7 +35,7 @@ describe('TenantUserCreatedMailHandler', () => {
       },
     };
     mailService = {
-      sendEmail: jest.fn(),
+      sendEmail: jest.fn<(input: SendEmailInput) => Promise<void>>(),
     };
     configService = {
       getOrThrow: jest.fn().mockReturnValue('https://tenant.example.com/'),
@@ -42,7 +47,7 @@ describe('TenantUserCreatedMailHandler', () => {
     );
   });
 
-  it('sends setup email with base64 encoded email and password in setup url', async () => {
+  it('sends setup email with base64url encoded auto-login payload in setup url', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 'user-id',
       email: 'user@example.com',
@@ -54,18 +59,18 @@ describe('TenantUserCreatedMailHandler', () => {
       temporaryPassword: 'Temp+Password/1=',
     });
 
-    const setupUrl = mailService.sendEmail.mock.calls[0][0].templateVariables
-      .setupUrl as string;
-    const params = new URLSearchParams(setupUrl.split('#')[1]);
+    const payload = Buffer.from(
+      JSON.stringify({
+        email: 'user@example.com',
+        password: 'Temp+Password/1=',
+      }),
+      'utf8',
+    ).toString('base64url');
 
-    expect(setupUrl).toBe(
-      'https://tenant.example.com/account-setup#email=dXNlckBleGFtcGxlLmNvbQ%3D%3D&password=VGVtcCtQYXNzd29yZC8xPQ%3D%3D',
-    );
-    expect(params.get('email')).toBe(
-      Buffer.from('user@example.com', 'utf8').toString('base64'),
-    );
-    expect(params.get('password')).toBe(
-      Buffer.from('Temp+Password/1=', 'utf8').toString('base64'),
+    const sendEmailInput = mailService.sendEmail.mock.calls[0]?.[0];
+
+    expect(sendEmailInput?.templateVariables?.setupUrl).toBe(
+      `https://tenant.example.com/auto-login#${payload}`,
     );
   });
 

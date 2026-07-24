@@ -1,4 +1,8 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { CloudTasksClient, protos } from '@google-cloud/tasks';
 import { ConfigService } from '@nestjs/config';
 

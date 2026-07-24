@@ -18,6 +18,7 @@ const verifyPasswordMock = jest.mocked(verifyPassword);
 
 describe('PinLoginCommand', () => {
   const refreshTokenValidTo = futureDate();
+  const sessionUnlockedUntil = futureDate();
 
   let prisma: {
     user: {
@@ -32,6 +33,7 @@ describe('PinLoginCommand', () => {
     createRefreshToken: jest.Mock;
     hashToken: jest.Mock;
     getRefreshTokenValidTo: jest.Mock;
+    getSessionUnlockedUntil: jest.Mock;
     createAccessToken: jest.Mock;
     setAuthCookies: jest.Mock;
     clearAuthCookies: jest.Mock;
@@ -58,6 +60,7 @@ describe('PinLoginCommand', () => {
       createRefreshToken: jest.fn().mockReturnValue('new-refresh-token'),
       hashToken: jest.fn().mockResolvedValue('new-refresh-token-hash'),
       getRefreshTokenValidTo: jest.fn().mockReturnValue(refreshTokenValidTo),
+      getSessionUnlockedUntil: jest.fn().mockReturnValue(sessionUnlockedUntil),
       createAccessToken: jest.fn().mockResolvedValue('new-access-token'),
       setAuthCookies: jest.fn(),
       clearAuthCookies: jest.fn(),
@@ -185,6 +188,7 @@ describe('PinLoginCommand', () => {
         incorrectPINCounter: 0,
         refreshTokenHash: 'new-refresh-token-hash',
         refreshTokenValidTo,
+        sessionUnlockedUntil,
       },
     });
     expect(tokenService.createAccessToken).toHaveBeenCalledWith(user);

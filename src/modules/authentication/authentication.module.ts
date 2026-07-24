@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
@@ -20,9 +21,11 @@ import { AccountUnlockMailHandler } from './mails/handlers/account-unlock-mail.h
 import { PasswordResetMailHandler } from './mails/handlers/password-reset-mail.handler';
 import { AuthenticationMailQueueService } from './mails/authentication-mail-queue.service';
 import { AuthenticationMailsHandler } from './mails/authentication-mails.handler';
+import { AuthenticationQueryHandlers } from './queries';
 
 @Module({
   imports: [
+    CqrsModule,
     PrismaModule,
     PassportModule,
     JwtModule.register({}),
@@ -45,6 +48,7 @@ import { AuthenticationMailsHandler } from './mails/authentication-mails.handler
     AuthenticationMailsHandler,
     AccountUnlockMailHandler,
     PasswordResetMailHandler,
+    ...AuthenticationQueryHandlers,
   ],
 })
 export class AuthenticationModule {}

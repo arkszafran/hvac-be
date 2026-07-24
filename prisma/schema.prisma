@@ -43,6 +43,7 @@ model User {
   passwordResetCodeHash String?
   passwordResetCodeValidTo DateTime?
   passwordResetIncorrectCounter Int @default(0)
+  passwordResetRequestAvailableAt DateTime?
   tenants               User_tenant[]
 }
 

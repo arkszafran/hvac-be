@@ -94,10 +94,7 @@ export class MailService {
       pool: true,
       maxConnections: this.getNumberEnv('SMTP_MAX_CONNECTIONS', 5),
       maxMessages: this.getNumberEnv('SMTP_MAX_MESSAGES', 100),
-      connectionTimeout: this.getNumberEnv(
-        'SMTP_CONNECTION_TIMEOUT_MS',
-        10000,
-      ),
+      connectionTimeout: this.getNumberEnv('SMTP_CONNECTION_TIMEOUT_MS', 10000),
       greetingTimeout: this.getNumberEnv('SMTP_GREETING_TIMEOUT_MS', 10000),
       socketTimeout: this.getNumberEnv('SMTP_SOCKET_TIMEOUT_MS', 30000),
       tls: {
@@ -124,9 +121,7 @@ export class MailService {
       return defaultValue;
     }
 
-    return ['true', '1', 'yes', 'on'].includes(
-      configured.trim().toLowerCase(),
-    );
+    return ['true', '1', 'yes', 'on'].includes(configured.trim().toLowerCase());
   }
 
   private getNumberEnv(key: string, defaultValue: number): number {

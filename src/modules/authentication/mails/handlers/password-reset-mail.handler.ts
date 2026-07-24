@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
 import { Injectable, NotFoundException } from '@nestjs/common';
@@ -65,12 +66,12 @@ export class PasswordResetMailHandler {
     const baseUrl = this.configService
       .getOrThrow<string>('FRONTEND_TENANT_ORIGIN')
       .replace(/\/$/, '');
-    const params = new URLSearchParams({
-      userId,
-      code,
-    });
+    const payload = Buffer.from(
+      JSON.stringify({ code, userId }),
+      'utf8',
+    ).toString('base64url');
 
-    return `${baseUrl}/password-reset#${params.toString()}`;
+    return `${baseUrl}/password-reset#${payload}`;
   }
 
   private getResetCodeValidTo(now = new Date()): Date {

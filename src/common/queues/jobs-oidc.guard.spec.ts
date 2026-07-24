@@ -31,7 +31,9 @@ describe('JobsOidcGuard', () => {
       }),
     };
     guard = new JobsOidcGuard(
-      configService as unknown as ConstructorParameters<typeof JobsOidcGuard>[0],
+      configService as unknown as ConstructorParameters<
+        typeof JobsOidcGuard
+      >[0],
     );
   });
 

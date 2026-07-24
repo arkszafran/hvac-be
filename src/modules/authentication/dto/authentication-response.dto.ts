@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { UserRole, UserStatus, UserTenantRole } from '@generated/prisma/enums';
 
 export class AuthenticationSuccessResponseDto {
   @ApiProperty({ example: true })
@@ -11,6 +12,45 @@ export class AuthenticationSuccessResponseDto {
     additionalProperties: false,
   })
   data: null;
+}
+
+export class AuthenticationSessionTenantDto {
+  @ApiProperty({ example: 'd22d4b60-89aa-4feb-ac6b-21235bf1cd85' })
+  id: string;
+
+  @ApiProperty({ example: 'Acme HVAC' })
+  name: string;
+
+  @ApiProperty({ enum: UserTenantRole, example: UserTenantRole.ADMIN })
+  role: UserTenantRole;
+}
+
+export class AuthenticationSessionUserDto {
+  @ApiProperty({ example: '7cfa926e-8a69-4f59-9d1d-363eb59cf51d' })
+  id: string;
+
+  @ApiProperty({ example: 'Jane Doe' })
+  name: string;
+
+  @ApiProperty({ example: 'jane@example.com' })
+  email: string;
+
+  @ApiProperty({ enum: UserRole, example: UserRole.TENANT_USER })
+  role: UserRole;
+
+  @ApiProperty({ enum: UserStatus, example: UserStatus.active })
+  status: UserStatus;
+
+  @ApiProperty({ type: [AuthenticationSessionTenantDto] })
+  tenants: AuthenticationSessionTenantDto[];
+}
+
+export class AuthenticationSessionResponseDto {
+  @ApiProperty({ example: true })
+  success: boolean;
+
+  @ApiProperty({ type: AuthenticationSessionUserDto })
+  data: AuthenticationSessionUserDto;
 }
 
 export class AuthenticationErrorDto {

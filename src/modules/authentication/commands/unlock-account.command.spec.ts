@@ -205,7 +205,9 @@ describe('UnlockAccountCommand', () => {
   });
 });
 
-async function expectInvalidUnlockCode(promise: Promise<unknown>): Promise<void> {
+async function expectInvalidUnlockCode(
+  promise: Promise<unknown>,
+): Promise<void> {
   await expect(promise).rejects.toBeInstanceOf(BadRequestException);
   await expect(promise).rejects.toMatchObject({
     response: {

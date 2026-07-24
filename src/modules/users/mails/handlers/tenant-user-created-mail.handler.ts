@@ -48,16 +48,12 @@ export class TenantUserCreatedMailHandler {
     const baseUrl = this.configService
       .getOrThrow<string>('FRONTEND_TENANT_ORIGIN')
       .replace(/\/$/, '');
-    const params = new URLSearchParams({
-      email: this.encodeBase64(email),
-      password: this.encodeBase64(temporaryPassword),
-    });
+    const payload = Buffer.from(
+      JSON.stringify({ email, password: temporaryPassword }),
+      'utf8',
+    ).toString('base64url');
 
-    return `${baseUrl}/account-setup#${params.toString()}`;
-  }
-
-  private encodeBase64(value: string): string {
-    return Buffer.from(value, 'utf8').toString('base64');
+    return `${baseUrl}/auto-login#${payload}`;
   }
 
   private getTemplateFilePath(): string {

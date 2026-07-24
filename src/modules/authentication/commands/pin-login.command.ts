@@ -83,6 +83,7 @@ export class PinLoginCommand {
     const refreshToken = this.tokenService.createRefreshToken();
     const refreshTokenHash = await this.tokenService.hashToken(refreshToken);
     const refreshTokenValidTo = this.tokenService.getRefreshTokenValidTo(now);
+    const sessionUnlockedUntil = this.tokenService.getSessionUnlockedUntil(now);
 
     await this.prisma.user.update({
       where: { id: user.id },
@@ -90,6 +91,7 @@ export class PinLoginCommand {
         incorrectPINCounter: 0,
         refreshTokenHash,
         refreshTokenValidTo,
+        sessionUnlockedUntil,
       },
     });
 

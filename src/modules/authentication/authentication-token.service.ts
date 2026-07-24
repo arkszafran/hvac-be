@@ -81,8 +81,9 @@ export class AuthenticationTokenService {
   }
 
   getFrontendRedirect(path: string): string {
-    const frontendOrigin =
-      this.configService.getOrThrow<string>('FRONTEND_TENANT_ORIGIN');
+    const frontendOrigin = this.configService.getOrThrow<string>(
+      'FRONTEND_TENANT_ORIGIN',
+    );
 
     return `${frontendOrigin.replace(/\/$/, '')}${path}`;
   }
