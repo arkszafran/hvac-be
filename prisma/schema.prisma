@@ -14,37 +14,46 @@ datasource db {
 }
 
 model Tenant {
-  id          String        @id @default(uuid()) @db.Uuid
-  name        String        @db.VarChar(255)
-  person_name String        @db.VarChar(255)
-  street      String        @db.VarChar(100)
-  city        String        @db.VarChar(50)
-  zip         String        @db.VarChar(6)
-  tax         String        @db.VarChar(10)
-  users       User_tenant[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  name                 String                @db.VarChar(255)
+  person_name          String                @db.VarChar(255)
+  street               String                @db.VarChar(100)
+  city                 String                @db.VarChar(50)
+  zip                  String                @db.VarChar(6)
+  tax                  String                @db.VarChar(10)
+  users                User_tenant[]
+  customers            Customer[]
+  devices              Device[]
+  serviceOrders        ServiceOrder[]
+  serviceOrderMessages MessageServiceOrder[]
+  visits               Visit[]
+  photoAttachments     PhotoAttachment[]
 }
 
 model User {
-  id                    String        @id @default(uuid()) @db.Uuid
-  name                  String        @db.VarChar(255)
-  email                 String        @db.VarChar(255)
-  password              String
-  pin                   String?
-  status                UserStatus    @default(new)
-  incorrectLoginCounter Int           @default(0)
-  incorrectPINCounter   Int           @default(0)
-  role                  UserRole      @default(TENANT_USER)
-  refreshTokenHash      String?
-  refreshTokenValidTo   DateTime?
-  sessionUnlockedUntil  DateTime?
-  accountUnlockCodeHash String?
-  accountUnlockCodeValidTo DateTime?
-  accountUnlockIncorrectCounter Int @default(0)
-  passwordResetCodeHash String?
-  passwordResetCodeValidTo DateTime?
-  passwordResetIncorrectCounter Int @default(0)
+  id                              String             @id @default(uuid()) @db.Uuid
+  name                            String             @db.VarChar(255)
+  email                           String             @db.VarChar(255)
+  password                        String
+  pin                             String?
+  status                          UserStatus         @default(new)
+  incorrectLoginCounter           Int                @default(0)
+  incorrectPINCounter             Int                @default(0)
+  role                            UserRole           @default(TENANT_USER)
+  refreshTokenHash                String?
+  refreshTokenValidTo             DateTime?
+  sessionUnlockedUntil            DateTime?
+  accountUnlockCodeHash           String?
+  accountUnlockCodeValidTo        DateTime?
+  accountUnlockIncorrectCounter   Int                @default(0)
+  passwordResetCodeHash           String?
+  passwordResetCodeValidTo        DateTime?
+  passwordResetIncorrectCounter   Int                @default(0)
   passwordResetRequestAvailableAt DateTime?
-  tenants               User_tenant[]
+  tenants                         User_tenant[]
+  assignedServiceOrders           ServiceOrder[]     @relation("ServiceOrderAssignee")
+  serviceOrderNotes               ServiceOrderNote[] @relation("ServiceOrderNoteAuthor")
+  visits                          Visit[]            @relation("VisitUser")
 }
 
 model User_tenant {
@@ -65,6 +74,231 @@ model Seed {
   error      String?
 }
 
+model Customer {
+  id            String         @id @default(uuid()) @db.Uuid
+  tenantId      String         @db.Uuid
+  customerType  CustomerType
+  companyName   String?
+  fullName      String?
+  phone         String
+  email         String
+  address       String
+  postalCode    String
+  city          String
+  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
+  archivedAt    DateTime?      @db.Timestamptz(6)
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  devices       Device[]
+  serviceOrders ServiceOrder[]
+  visits        Visit[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@map("customers")
+}
+
+model Device {
+  id                           String               @id @default(uuid()) @db.Uuid
+  tenantId                     String               @db.Uuid
+  customerId                   String               @db.Uuid
+  deviceType                   DeviceType
+  brand                        String
+  model                        String
+  powerKw                      Decimal?             @db.Decimal(8, 3)
+  serialNumber                 String?
+  installationDate             DateTime?            @db.Date
+  warrantyMonths               Int                  @default(0)
+  warrantyUntil                DateTime?            @db.Date
+  note                         String?
+  refrigerant                  String?
+  refrigerantAmount            String?
+  location                     String?
+  hasCustomInstallationAddress Boolean              @default(false)
+  address                      String?
+  postalCode                   String?
+  city                         String?
+  createdAt                    DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt                    DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
+  archivedAt                   DateTime?            @db.Timestamptz(6)
+  tenant                       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer                     Customer             @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  serviceOrderDevices          ServiceOrderDevice[]
+  visitDevices                 VisitDevice[]
+
+  @@index([tenantId])
+  @@map("devices")
+}
+
+model ServiceOrder {
+  id               String                        @id @default(uuid()) @db.Uuid
+  tenantId         String                        @db.Uuid
+  customerId       String?                       @db.Uuid
+  customerType     CustomerType
+  companyName      String?
+  fullName         String?
+  phone            String
+  email            String
+  address          String?
+  postalCode       String?
+  city             String?
+  serviceOrderType ServiceOrderType
+  source           ServiceOrderSource
+  status           ServiceOrderStatus
+  assigneeUserId   String?                       @db.Uuid
+  orderDate        DateTime                      @db.Timestamptz(6)
+  scheduledAt      DateTime?                     @db.Timestamptz(6)
+  nextContactAt    DateTime?                     @db.Timestamptz(6)
+  createdAt        DateTime                      @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime                      @default(now()) @updatedAt @db.Timestamptz(6)
+  tenant           Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer         Customer?                     @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  assignee         User?                         @relation("ServiceOrderAssignee", fields: [assigneeUserId], references: [id], onDelete: Restrict)
+  installationData InstallationServiceOrderData?
+  rooms            ServiceOrderRoom[]
+  devices          ServiceOrderDevice[]
+  notes            ServiceOrderNote[]
+  messages         MessageServiceOrder[]
+  visits           Visit[]
+  photoAttachments PhotoAttachment[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, status, scheduledAt])
+  @@index([tenantId, status, nextContactAt])
+  @@map("serviceOrders")
+}
+
+model InstallationServiceOrderData {
+  serviceOrderId String                   @id @db.Uuid
+  buildingType   ServiceOrderBuildingType
+  serviceOrder   ServiceOrder             @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+
+  @@map("installationServiceOrderData")
+}
+
+model ServiceOrderRoom {
+  id                             String                       @id @default(uuid()) @db.Uuid
+  serviceOrderId                 String                       @db.Uuid
+  area                           Decimal                      @db.Decimal(8, 2)
+  height                         Decimal                      @db.Decimal(6, 2)
+  outdoorUnitPlace               ServiceOrderOutdoorUnitPlace
+  estimatedDistanceToOutdoorUnit Decimal?                     @db.Decimal(8, 2)
+  floor                          Int
+  sortOrder                      Int                          @default(0)
+  serviceOrder                   ServiceOrder                 @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  photoAttachments               PhotoAttachment[]
+
+  @@map("serviceOrderRooms")
+}
+
+model ServiceOrderDevice {
+  id                String            @id @default(uuid()) @db.Uuid
+  serviceOrderId    String            @db.Uuid
+  systemDeviceId    String?           @db.Uuid
+  deviceType        DeviceType
+  brand             String
+  model             String
+  serialNumber      String?
+  refrigerant       String?
+  refrigerantAmount String?
+  displayedError    String?
+  sortOrder         Int               @default(0)
+  serviceOrder      ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  systemDevice      Device?           @relation(fields: [systemDeviceId], references: [id], onDelete: SetNull)
+  photoAttachments  PhotoAttachment[]
+
+  @@map("serviceOrderDevices")
+}
+
+model ServiceOrderNote {
+  id               String            @id @default(uuid()) @db.Uuid
+  serviceOrderId   String            @db.Uuid
+  content          String
+  authorId         String            @db.Uuid
+  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime?         @updatedAt @db.Timestamptz(6)
+  serviceOrder     ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  author           User              @relation("ServiceOrderNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  photoAttachments PhotoAttachment[]
+
+  @@map("serviceOrderNotes")
+}
+
+model MessageServiceOrder {
+  id                         String                     @id @default(uuid()) @db.Uuid
+  tenantId                   String                     @db.Uuid
+  serviceOrderId             String                     @db.Uuid
+  date                       DateTime                   @db.Timestamptz(6)
+  confirmationStatus         MessageConfirmationStatus?
+  channel                    ServiceOrderMessageChannel
+  confirmationTokenHash      String                     @unique
+  confirmationTokenExpiresAt DateTime                   @db.Timestamptz(6)
+  respondedAt                DateTime?                  @db.Timestamptz(6)
+  createdAt                  DateTime                   @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                   @default(now()) @updatedAt @db.Timestamptz(6)
+  tenant                     Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  serviceOrder               ServiceOrder               @relation(fields: [tenantId, serviceOrderId], references: [tenantId, id], onDelete: Cascade)
+
+  @@map("messagesServiceOrder")
+}
+
+model Visit {
+  id               String            @id @default(uuid()) @db.Uuid
+  tenantId         String            @db.Uuid
+  serviceOrderId   String?           @db.Uuid
+  customerId       String            @db.Uuid
+  userId           String            @db.Uuid
+  date             DateTime          @db.Date
+  visitType        VisitType
+  createdAt        DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime          @default(now()) @updatedAt @db.Timestamptz(6)
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  serviceOrder     ServiceOrder?     @relation(fields: [tenantId, serviceOrderId], references: [tenantId, id], onDelete: Restrict)
+  customer         Customer          @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  user             User              @relation("VisitUser", fields: [userId], references: [id], onDelete: Restrict)
+  devices          VisitDevice[]
+  photoAttachments PhotoAttachment[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId])
+  @@map("visits")
+}
+
+model VisitDevice {
+  visitId   String  @db.Uuid
+  deviceId  String  @db.Uuid
+  note      String?
+  sortOrder Int     @default(0)
+  visit     Visit   @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  device    Device  @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+
+  @@id([visitId, deviceId])
+  @@map("visitDevices")
+}
+
+model PhotoAttachment {
+  id                   String              @id @default(uuid()) @db.Uuid
+  tenantId             String              @db.Uuid
+  fileName             String
+  url                  String
+  description          String?
+  serviceOrderId       String?             @db.Uuid
+  serviceOrderRoomId   String?             @db.Uuid
+  serviceOrderDeviceId String?             @db.Uuid
+  serviceOrderNoteId   String?             @db.Uuid
+  visitId              String?             @db.Uuid
+  sortOrder            Int                 @default(0)
+  createdAt            DateTime            @default(now()) @db.Timestamptz(6)
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  serviceOrder         ServiceOrder?       @relation(fields: [tenantId, serviceOrderId], references: [tenantId, id], onDelete: Cascade)
+  serviceOrderRoom     ServiceOrderRoom?   @relation(fields: [serviceOrderRoomId], references: [id], onDelete: Cascade)
+  serviceOrderDevice   ServiceOrderDevice? @relation(fields: [serviceOrderDeviceId], references: [id], onDelete: Cascade)
+  serviceOrderNote     ServiceOrderNote?   @relation(fields: [serviceOrderNoteId], references: [id], onDelete: Cascade)
+  visit                Visit?              @relation(fields: [tenantId, visitId], references: [tenantId, id], onDelete: Cascade)
+
+  @@map("photoAttachments")
+}
+
 enum UserStatus {
   active
   blocked
@@ -79,4 +313,84 @@ enum UserRole {
 enum UserTenantRole {
   USER
   ADMIN
+}
+
+enum CustomerType {
+  company
+  individual
+
+  @@map("customerTypeEnum")
+}
+
+enum DeviceType {
+  air_conditioning @map("air-conditioning")
+  heat_pump        @map("heat-pump")
+  ventilation
+
+  @@map("deviceTypeEnum")
+}
+
+enum ServiceOrderType {
+  installation
+  repair
+  inspection
+
+  @@map("serviceOrderTypeEnum")
+}
+
+enum ServiceOrderSource {
+  customer_panel @map("customer-panel")
+  website_form   @map("website-form")
+  user
+  system
+
+  @@map("serviceOrderSourceEnum")
+}
+
+enum ServiceOrderStatus {
+  new
+  contact_required
+  scheduled
+  completed
+  cancelled
+
+  @@map("serviceOrderStatusEnum")
+}
+
+enum ServiceOrderBuildingType {
+  apartment_block @map("apartment-block")
+  house
+  office_building @map("office-building")
+
+  @@map("serviceOrderBuildingTypeEnum")
+}
+
+enum ServiceOrderOutdoorUnitPlace {
+  wall
+  balcony
+  roof
+
+  @@map("serviceOrderOutdoorUnitPlaceEnum")
+}
+
+enum ServiceOrderMessageChannel {
+  email
+  sms
+
+  @@map("serviceOrderMessageChannelEnum")
+}
+
+enum MessageConfirmationStatus {
+  confirmed
+  not_confirmed
+
+  @@map("messageConfirmationStatusEnum")
+}
+
+enum VisitType {
+  installation
+  repair
+  inspection
+
+  @@map("visitTypeEnum")
 }

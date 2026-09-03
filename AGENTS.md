@@ -35,6 +35,8 @@
 - Use events for decoupling between modules when direct dependencies would create tight coupling.
 - Do not create god services.
 - Keep each provider focused on one responsibility.
+- On data model upgrade make changes only in `schema.prisma` then run command migrate:dev to create migration,
+  you can modify migration file to create indexes only or other things not available form `schema.prisma`
 
 ## Module structure
 
