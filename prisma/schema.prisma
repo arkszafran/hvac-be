@@ -28,6 +28,28 @@ model Tenant {
   serviceOrderMessages MessageServiceOrder[]
   visits               Visit[]
   photoAttachments     PhotoAttachment[]
+  encryptionKeys       TenantEncryptionKey[]
+}
+
+model TenantEncryptionKey {
+  tenantId              String                    @db.Uuid
+  version               Int
+  wrappedDek            Bytes
+  kekKeyName            String
+  kekKeyVersion         String
+  status                TenantEncryptionKeyStatus
+  createdAt             DateTime                  @default(now()) @db.Timestamptz(6)
+  activatedAt           DateTime                  @default(now()) @db.Timestamptz(6)
+  retiredAt             DateTime?                 @db.Timestamptz(6)
+  tenant                Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customers             Customer[]                @relation("CustomerEncryptionKey")
+  devices               Device[]                  @relation("DeviceInstallationAddressEncryptionKey")
+  serviceOrderSnapshots ServiceOrder[]            @relation("ServiceOrderCustomerSnapshotEncryptionKey")
+
+  @@id([tenantId, version])
+  @@index([tenantId, status])
+  @@index([kekKeyVersion])
+  @@map("tenantEncryptionKeys")
 }
 
 model User {
@@ -75,92 +97,97 @@ model Seed {
 }
 
 model Customer {
-  id            String         @id @default(uuid()) @db.Uuid
-  tenantId      String         @db.Uuid
-  customerType  CustomerType
-  companyName   String?
-  fullName      String?
-  phone         String
-  email         String
-  address       String
-  postalCode    String
-  city          String
-  createdAt     DateTime       @default(now()) @db.Timestamptz(6)
-  updatedAt     DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
-  archivedAt    DateTime?      @db.Timestamptz(6)
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  devices       Device[]
-  serviceOrders ServiceOrder[]
-  visits        Visit[]
+  id                        String              @id @default(uuid()) @db.Uuid
+  tenantId                  String              @db.Uuid
+  customerType              CustomerType
+  piiCiphertext             Bytes
+  piiNonce                  Bytes
+  piiKeyVersion             Int
+  piiFormatVersion          Int                 @default(1)
+  emailLookupHash           Bytes
+  emailLookupKeyVersion     Int                 @default(1)
+  portalLoginTokenHash      Bytes?
+  portalLoginTokenExpiresAt DateTime?           @db.Timestamptz(6)
+  portalLastLoginAt         DateTime?           @db.Timestamptz(6)
+  createdAt                 DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  archivedAt                DateTime?           @db.Timestamptz(6)
+  tenant                    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  encryptionKey             TenantEncryptionKey @relation("CustomerEncryptionKey", fields: [tenantId, piiKeyVersion], references: [tenantId, version], onDelete: Restrict)
+  devices                   Device[]
+  serviceOrders             ServiceOrder[]
+  visits                    Visit[]
 
   @@unique([tenantId, id])
+  @@unique([tenantId, emailLookupHash])
   @@index([tenantId])
+  @@index([tenantId, portalLoginTokenHash])
   @@map("customers")
 }
 
 model Device {
-  id                           String               @id @default(uuid()) @db.Uuid
-  tenantId                     String               @db.Uuid
-  customerId                   String               @db.Uuid
-  deviceType                   DeviceType
-  brand                        String
-  model                        String
-  powerKw                      Decimal?             @db.Decimal(8, 3)
-  serialNumber                 String?
-  installationDate             DateTime?            @db.Date
-  warrantyMonths               Int                  @default(0)
-  warrantyUntil                DateTime?            @db.Date
-  note                         String?
-  refrigerant                  String?
-  refrigerantAmount            String?
-  location                     String?
-  hasCustomInstallationAddress Boolean              @default(false)
-  address                      String?
-  postalCode                   String?
-  city                         String?
-  createdAt                    DateTime             @default(now()) @db.Timestamptz(6)
-  updatedAt                    DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
-  archivedAt                   DateTime?            @db.Timestamptz(6)
-  tenant                       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  customer                     Customer             @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
-  serviceOrderDevices          ServiceOrderDevice[]
-  visitDevices                 VisitDevice[]
+  id                               String               @id @default(uuid()) @db.Uuid
+  tenantId                         String               @db.Uuid
+  customerId                       String               @db.Uuid
+  deviceType                       DeviceType
+  brand                            String
+  model                            String
+  powerKw                          Decimal?             @db.Decimal(8, 3)
+  serialNumber                     String?
+  installationDate                 DateTime?            @db.Date
+  warrantyMonths                   Int                  @default(0)
+  warrantyUntil                    DateTime?            @db.Date
+  note                             String?
+  refrigerant                      String?
+  refrigerantAmount                String?
+  location                         String?
+  hasCustomInstallationAddress     Boolean              @default(false)
+  installationAddressCiphertext    Bytes?
+  installationAddressNonce         Bytes?
+  installationAddressKeyVersion    Int?
+  installationAddressFormatVersion Int?
+  createdAt                        DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt                        DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
+  archivedAt                       DateTime?            @db.Timestamptz(6)
+  tenant                           Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer                         Customer             @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  installationAddressEncryptionKey TenantEncryptionKey? @relation("DeviceInstallationAddressEncryptionKey", fields: [tenantId, installationAddressKeyVersion], references: [tenantId, version], onDelete: Restrict)
+  serviceOrderDevices              ServiceOrderDevice[]
+  visitDevices                     VisitDevice[]
 
   @@index([tenantId])
   @@map("devices")
 }
 
 model ServiceOrder {
-  id               String                        @id @default(uuid()) @db.Uuid
-  tenantId         String                        @db.Uuid
-  customerId       String?                       @db.Uuid
-  customerType     CustomerType
-  companyName      String?
-  fullName         String?
-  phone            String
-  email            String
-  address          String?
-  postalCode       String?
-  city             String?
-  serviceOrderType ServiceOrderType
-  source           ServiceOrderSource
-  status           ServiceOrderStatus
-  assigneeUserId   String?                       @db.Uuid
-  orderDate        DateTime                      @db.Timestamptz(6)
-  scheduledAt      DateTime?                     @db.Timestamptz(6)
-  nextContactAt    DateTime?                     @db.Timestamptz(6)
-  createdAt        DateTime                      @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime                      @default(now()) @updatedAt @db.Timestamptz(6)
-  tenant           Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  customer         Customer?                     @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
-  assignee         User?                         @relation("ServiceOrderAssignee", fields: [assigneeUserId], references: [id], onDelete: Restrict)
-  installationData InstallationServiceOrderData?
-  rooms            ServiceOrderRoom[]
-  devices          ServiceOrderDevice[]
-  notes            ServiceOrderNote[]
-  messages         MessageServiceOrder[]
-  visits           Visit[]
-  photoAttachments PhotoAttachment[]
+  id                            String                        @id @default(uuid()) @db.Uuid
+  tenantId                      String                        @db.Uuid
+  customerId                    String?                       @db.Uuid
+  customerType                  CustomerType
+  customerSnapshotCiphertext    Bytes
+  customerSnapshotNonce         Bytes
+  customerSnapshotKeyVersion    Int
+  customerSnapshotFormatVersion Int                           @default(1)
+  serviceOrderType              ServiceOrderType
+  source                        ServiceOrderSource
+  status                        ServiceOrderStatus
+  assigneeUserId                String?                       @db.Uuid
+  orderDate                     DateTime                      @db.Timestamptz(6)
+  scheduledAt                   DateTime?                     @db.Timestamptz(6)
+  nextContactAt                 DateTime?                     @db.Timestamptz(6)
+  createdAt                     DateTime                      @default(now()) @db.Timestamptz(6)
+  updatedAt                     DateTime                      @default(now()) @updatedAt @db.Timestamptz(6)
+  tenant                        Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer                      Customer?                     @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
+  customerSnapshotEncryptionKey TenantEncryptionKey           @relation("ServiceOrderCustomerSnapshotEncryptionKey", fields: [tenantId, customerSnapshotKeyVersion], references: [tenantId, version], onDelete: Restrict)
+  assignee                      User?                         @relation("ServiceOrderAssignee", fields: [assigneeUserId], references: [id], onDelete: Restrict)
+  installationData              InstallationServiceOrderData?
+  rooms                         ServiceOrderRoom[]
+  devices                       ServiceOrderDevice[]
+  notes                         ServiceOrderNote[]
+  messages                      MessageServiceOrder[]
+  visits                        Visit[]
+  photoAttachments              PhotoAttachment[]
 
   @@unique([tenantId, id])
   @@index([tenantId, status, scheduledAt])
@@ -303,6 +330,14 @@ enum UserStatus {
   active
   blocked
   new
+}
+
+enum TenantEncryptionKeyStatus {
+  active
+  decrypt_only
+  retired
+
+  @@map("tenantEncryptionKeyStatusEnum")
 }
 
 enum UserRole {

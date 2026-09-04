@@ -8,4 +8,5 @@ allowBuilds:
   bcrypt: true
   prisma: true
   protobufjs: true
+  sse4_crc32: false
   unrs-resolver: true

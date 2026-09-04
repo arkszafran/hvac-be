@@ -28,6 +28,9 @@ export function validateEnvironment(
   assertPositiveInteger(config, 'PASSWORD_RESET_REQUEST_COOLDOWN_MINUTES');
   assertRequiredString(config, 'GCP_PROJECT_ID');
   assertRequiredString(config, 'GCP_LOCATION');
+  assertKmsKeyName(config, 'GCP_KMS_KEY_NAME');
+  assertPositiveInteger(config, 'PII_DEK_CACHE_TTL_SECONDS');
+  assertPositiveInteger(config, 'PII_DEK_CACHE_MAX_ENTRIES');
   assertRequiredUrl(config, 'PUBLIC_WORKER_BASE_URL');
   assertRequiredString(config, 'QUEUE_JOBS_OIDC_SERVICE_ACCOUNT_EMAIL');
   assertRequiredUrl(config, 'QUEUE_JOBS_OIDC_AUDIENCE');
@@ -48,6 +51,23 @@ export function validateEnvironment(
   assertOptionalPositiveInteger(config, 'SMTP_SOCKET_TIMEOUT_MS');
 
   return config;
+}
+
+function assertKmsKeyName(config: Record<string, unknown>, key: string): void {
+  const value = config[key];
+
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${key} env is required.`);
+  }
+
+  const cryptoKeyNamePattern =
+    /^projects\/[^/]+\/locations\/[^/]+\/keyRings\/[^/]+\/cryptoKeys\/[^/]+$/;
+
+  if (!cryptoKeyNamePattern.test(value.trim())) {
+    throw new Error(
+      `${key} env must be a full Google Cloud KMS CryptoKey resource name without a key version.`,
+    );
+  }
 }
 
 function assertSmtpUrl(config: Record<string, unknown>, key: string): void {

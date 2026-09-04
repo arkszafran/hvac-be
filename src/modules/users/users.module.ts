@@ -11,6 +11,7 @@ import { UsersRepository } from './infrastructure/users.repository';
 import { TenantUserCreatedMailHandler } from './mails/handlers/tenant-user-created-mail.handler';
 import { UsersMailQueueService } from './mails/users-mail-queue.service';
 import { UsersMailsHandler } from './mails/users-mails.handler';
+import { TenantEncryptionModule } from '../tenant-encryption/tenant-encryption.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersMailsHandler } from './mails/users-mails.handler';
     QueuesModule,
     MailModule,
     AuthSecurityModule,
+    TenantEncryptionModule,
   ],
   controllers: [UsersController],
   providers: [

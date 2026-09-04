@@ -18,6 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:kms:integration": "jest --config ./test/jest-kms-integration.json --runInBand",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
@@ -25,6 +26,7 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@google-cloud/kms": "^6.0.0",
     "@google-cloud/tasks": "^6.2.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -43,9 +45,10 @@
     "class-validator": "^0.15.1",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
+    "fast-crc32c": "^2.0.0",
+    "google-auth-library": "10.5.0",
     "handlebars": "^4.7.9",
     "helmet": "^8.2.0",
-    "google-auth-library": "10.5.0",
     "nodemailer": "^9.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",

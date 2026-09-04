@@ -1,5 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
+import { randomUUID } from 'node:crypto';
 
 import {
   apiError,
@@ -11,6 +12,7 @@ import {
   hashPassword,
 } from '../../../../common/security/password/password';
 import { UsersMailQueueService } from '../../mails/users-mail-queue.service';
+import { TenantKeyService } from '../../../tenant-encryption/tenant-key.service';
 import { USERS_ERROR_CODES } from '../../users.constants';
 import { UsersRepository } from '../../infrastructure/users.repository';
 import { CreateTenantCommand } from '../impl/create-tenant.command';
@@ -27,6 +29,7 @@ export class CreateTenantHandler implements ICommandHandler<
 > {
   constructor(
     private readonly usersRepository: UsersRepository,
+    private readonly tenantKeyService: TenantKeyService,
     private readonly mailQueueService: UsersMailQueueService,
   ) {}
 
@@ -46,6 +49,9 @@ export class CreateTenantHandler implements ICommandHandler<
 
     const temporaryPassword = generateTemporaryPassword();
     const password = await hashPassword(temporaryPassword);
+    const tenantId = randomUUID();
+    const encryptionKey =
+      await this.tenantKeyService.prepareInitialKey(tenantId);
     const result = await this.usersRepository.createTenantWithFirstUser({
       tenant: {
         name: command.dto.tenant.name,
@@ -60,6 +66,7 @@ export class CreateTenantHandler implements ICommandHandler<
         email,
         password,
       },
+      encryptionKey,
     });
 
     await this.mailQueueService.queueTenantUserCreatedEmail({

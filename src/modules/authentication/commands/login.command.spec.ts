@@ -67,10 +67,12 @@ describe('LoginCommand', () => {
       queueEmail: jest.fn().mockResolvedValue('task-name'),
     };
     accountStatusService = {
-      throwIfBlocked: jest.fn(async (user) => {
+      throwIfBlocked: jest.fn((user: { readonly status: UserStatus }) => {
         if (user.status === UserStatus.blocked) {
           throwLoginRetriesLimitReachedException();
         }
+
+        return Promise.resolve();
       }),
     };
     response = {} as Response;

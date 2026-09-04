@@ -27,6 +27,10 @@ describe('CreateTenantHandler', () => {
   let mailQueueService: {
     queueTenantUserCreatedEmail: jest.Mock;
   };
+  let tenantKeyService: {
+    prepareInitialKey: jest.Mock;
+  };
+  let preparedTenantId: string | undefined;
   let handler: CreateTenantHandler;
 
   beforeEach(() => {
@@ -37,13 +41,29 @@ describe('CreateTenantHandler', () => {
     mailQueueService = {
       queueTenantUserCreatedEmail: jest.fn(),
     };
+    tenantKeyService = {
+      prepareInitialKey: jest.fn().mockImplementation((tenantId: string) => {
+        preparedTenantId = tenantId;
+
+        return {
+          tenantId,
+          version: 1,
+          wrappedDek: Buffer.from('wrapped-dek'),
+          kekKeyName: 'kms-key',
+          kekKeyVersion: 'kms-key/cryptoKeyVersions/1',
+        };
+      }),
+    };
     handler = new CreateTenantHandler(
       usersRepository as unknown as ConstructorParameters<
         typeof CreateTenantHandler
       >[0],
-      mailQueueService as unknown as ConstructorParameters<
+      tenantKeyService as unknown as ConstructorParameters<
         typeof CreateTenantHandler
       >[1],
+      mailQueueService as unknown as ConstructorParameters<
+        typeof CreateTenantHandler
+      >[2],
     );
 
     generateTemporaryPasswordMock.mockReset().mockReturnValue('temporary-pass');
@@ -67,6 +87,7 @@ describe('CreateTenantHandler', () => {
       },
     });
 
+    expect(preparedTenantId).toEqual(expect.any(String));
     expect(usersRepository.createTenantWithFirstUser).toHaveBeenCalledWith({
       tenant: {
         name: 'Tenant',
@@ -80,6 +101,13 @@ describe('CreateTenantHandler', () => {
         name: 'User',
         email: 'user@example.com',
         password: 'hashed-temporary-pass',
+      },
+      encryptionKey: {
+        tenantId: preparedTenantId,
+        version: 1,
+        wrappedDek: Buffer.from('wrapped-dek'),
+        kekKeyName: 'kms-key',
+        kekKeyVersion: 'kms-key/cryptoKeyVersions/1',
       },
     });
     expect(mailQueueService.queueTenantUserCreatedEmail).toHaveBeenCalledWith({
@@ -101,6 +129,7 @@ describe('CreateTenantHandler', () => {
       },
     });
     await expect(result).rejects.toBeInstanceOf(ConflictException);
+    expect(tenantKeyService.prepareInitialKey).not.toHaveBeenCalled();
   });
 });
 

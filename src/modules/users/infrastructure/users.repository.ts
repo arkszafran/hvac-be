@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { UserRole, UserStatus, UserTenantRole } from '@generated/prisma/enums';
+import {
+  TenantEncryptionKeyStatus,
+  UserRole,
+  UserStatus,
+  UserTenantRole,
+} from '@generated/prisma/enums';
 
+import type { WrappedTenantDek } from '../../../common/encryption/encryption.types';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { toPrismaBytes } from '../../../common/prisma/prisma-bytes';
 
 export type CreateTenantWithFirstUserInput = {
   readonly tenant: {
@@ -17,6 +24,7 @@ export type CreateTenantWithFirstUserInput = {
     readonly email: string;
     readonly password: string;
   };
+  readonly encryptionKey: WrappedTenantDek;
 };
 
 export type CreateTenantWithFirstUserResult = {
@@ -58,6 +66,7 @@ export class UsersRepository {
     return this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
+          id: input.encryptionKey.tenantId,
           name: input.tenant.name,
           person_name: input.tenant.personName,
           street: input.tenant.street,
@@ -66,6 +75,17 @@ export class UsersRepository {
           tax: input.tenant.tax,
         },
         select: { id: true },
+      });
+
+      await tx.tenantEncryptionKey.create({
+        data: {
+          tenantId: tenant.id,
+          version: input.encryptionKey.version,
+          wrappedDek: toPrismaBytes(input.encryptionKey.wrappedDek),
+          kekKeyName: input.encryptionKey.kekKeyName,
+          kekKeyVersion: input.encryptionKey.kekKeyVersion,
+          status: TenantEncryptionKeyStatus.active,
+        },
       });
 
       const user = await tx.user.create({

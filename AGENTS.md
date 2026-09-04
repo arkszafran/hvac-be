@@ -215,3 +215,62 @@ new ValidationPipe({
 ## Guards
 
 - Always import guards (AuthGuard, RoleAuthGuard, TenantGuard) using alias '@auth';
+
+## PII encryption in handlers
+
+- Import `TenantEncryptionModule` into every module that handles Customer, ServiceOrder or Device PII. Inject `TenantPiiCipherService` into command and query handlers. Never call Google KMS, `TenantKeyService` or `AesGcmCipherService` directly.
+
+- Always obtain `tenantId` from the authenticated context. Generate the record ID before encryption because `tenantId`, record ID, purpose and key version are protected by AAD.
+
+- In create command handlers, build and validate the complete PII object, then encrypt it:
+
+```ts
+const encrypted = await this.piiCipher.encryptJson({
+  tenantId,
+  recordId,
+  purpose: ENCRYPTION_PURPOSES.customerPii,
+  value: {
+    fullName,
+    companyName,
+    phone,
+    email,
+    address,
+    postalCode,
+    city,
+  },
+});
+
+- Pass only encrypted fields to the repository:
+{
+  piiCiphertext: encrypted.ciphertext,
+  piiNonce: encrypted.nonce,
+  piiKeyVersion: encrypted.keyVersion,
+  piiFormatVersion: encrypted.formatVersion,
+}
+
+- In query handlers, load the encrypted record through a tenant-scoped repository and decrypt it:
+const value = await this.piiCipher.decryptJson({
+  tenantId,
+  recordId: row.id,
+  purpose: ENCRYPTION_PURPOSES.customerPii,
+  encrypted: {
+    ciphertext: row.piiCiphertext,
+    nonce: row.piiNonce,
+    keyVersion: row.piiKeyVersion,
+    formatVersion: row.piiFormatVersion,
+  },
+});
+
+- In query handlers, load the encrypted record through a tenant-scoped repository and decrypt it:
+const value = await this.piiCipher.decryptJson({
+  tenantId,
+  recordId: row.id,
+  purpose: ENCRYPTION_PURPOSES.customerPii,
+  encrypted: {
+    ciphertext: row.piiCiphertext,
+    nonce: row.piiNonce,
+    keyVersion: row.piiKeyVersion,
+    formatVersion: row.piiFormatVersion,
+  },
+});
+```
