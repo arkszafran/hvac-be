@@ -10,6 +10,7 @@ import { AuthenticationModule } from './modules/authentication/authentication.mo
 import { OriginGuard } from './common/security/origin/origin.guard';
 import { UsersModule } from './modules/users/users.module';
 import { AuthSecurityModule } from '@auth';
+import { CustomersModule } from './modules/customers/customers.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AuthSecurityModule } from '@auth';
     QueuesModule,
     AuthenticationModule,
     UsersModule,
+    CustomersModule,
   ],
   providers: [
     {

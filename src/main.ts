@@ -81,6 +81,7 @@ function setupSwagger(app: INestApplication, enabled: boolean): void {
     .setVersion('1.0')
     .addTag('authentication')
     .addTag('users')
+    .addTag('customers')
     .addCookieAuth(
       AUTH_COOKIE_NAMES.accessToken,
       undefined,

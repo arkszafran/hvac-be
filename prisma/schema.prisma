@@ -97,7 +97,7 @@ model Seed {
 }
 
 model Customer {
-  id                        String              @id @default(uuid()) @db.Uuid
+  id                        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenantId                  String              @db.Uuid
   type                      CustomerType
   piiCiphertext             Bytes

@@ -3,6 +3,13 @@ export type ApiSuccessResponse<TData = null> = {
   data: TData;
 };
 
+export interface PaginationDto {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
 export type ApiErrorResponse<TDetails = null> = {
   success: false;
   error: {

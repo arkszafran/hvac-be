@@ -31,6 +31,10 @@ export function validateEnvironment(
   assertKmsKeyName(config, 'GCP_KMS_KEY_NAME');
   assertPositiveInteger(config, 'PII_DEK_CACHE_TTL_SECONDS');
   assertPositiveInteger(config, 'PII_DEK_CACHE_MAX_ENTRIES');
+  assertPositiveInteger(config, 'CUSTOMERS_CLIENT_FILTERING_LIMIT');
+  assertPositiveInteger(config, 'CUSTOMERS_PAGE_SIZE');
+  assertBase64Bytes(config, 'CUSTOMER_EMAIL_LOOKUP_HMAC_SECRET_BASE64', 32);
+  assertPositiveInteger(config, 'CUSTOMER_EMAIL_LOOKUP_HMAC_KEY_VERSION');
   assertRequiredUrl(config, 'PUBLIC_WORKER_BASE_URL');
   assertRequiredString(config, 'QUEUE_JOBS_OIDC_SERVICE_ACCOUNT_EMAIL');
   assertRequiredUrl(config, 'QUEUE_JOBS_OIDC_AUDIENCE');
@@ -51,6 +55,33 @@ export function validateEnvironment(
   assertOptionalPositiveInteger(config, 'SMTP_SOCKET_TIMEOUT_MS');
 
   return config;
+}
+
+function assertBase64Bytes(
+  config: Record<string, unknown>,
+  key: string,
+  expectedBytes: number,
+): void {
+  const value = config[key];
+
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${key} env is required.`);
+  }
+
+  const normalizedValue = value.trim();
+
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(normalizedValue)) {
+    throw new Error(`${key} env must be valid base64.`);
+  }
+
+  const decoded = Buffer.from(normalizedValue, 'base64');
+  const canonicalValue = decoded.toString('base64');
+
+  if (canonicalValue !== normalizedValue || decoded.length !== expectedBytes) {
+    throw new Error(
+      `${key} env must contain exactly ${expectedBytes} bytes encoded as base64.`,
+    );
+  }
 }
 
 function assertKmsKeyName(config: Record<string, unknown>, key: string): void {

@@ -215,6 +215,7 @@ new ValidationPipe({
 ## Guards
 
 - Always import guards (AuthGuard, RoleAuthGuard, TenantGuard) using alias '@auth';
+- Use @TenantId() to get tenantId, you can find it in src\common\security\auth\decorators\tenant-id.decorator.ts
 
 ## PII encryption in handlers
 
