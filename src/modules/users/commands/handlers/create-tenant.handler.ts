@@ -1,9 +1,7 @@
-import { ConflictException } from '@nestjs/common';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { randomUUID } from 'node:crypto';
 
 import {
-  apiError,
   apiSuccess,
   type ApiSuccessResponse,
 } from '../../../../common/types/api-response.type';
@@ -13,8 +11,10 @@ import {
 } from '../../../../common/security/password/password';
 import { UsersMailQueueService } from '../../mails/users-mail-queue.service';
 import { TenantKeyService } from '../../../tenant-encryption/tenant-key.service';
-import { USERS_ERROR_CODES } from '../../users.constants';
-import { UsersRepository } from '../../infrastructure/users.repository';
+import {
+  type CreateTenantWithAdminUserInput,
+  UsersRepository,
+} from '../../infrastructure/users.repository';
 import { CreateTenantCommand } from '../impl/create-tenant.command';
 
 type CreateTenantResult = {
@@ -37,22 +37,26 @@ export class CreateTenantHandler implements ICommandHandler<
     command: CreateTenantCommand,
   ): Promise<ApiSuccessResponse<CreateTenantResult>> {
     const email = command.dto.user.email.trim().toLowerCase();
-
-    if (await this.usersRepository.hasUserWithEmail(email)) {
-      throw new ConflictException(
-        apiError({
-          code: USERS_ERROR_CODES.emailAlreadyExists,
-          message: 'User with this email already exists.',
-        }),
-      );
-    }
-
-    const temporaryPassword = generateTemporaryPassword();
-    const password = await hashPassword(temporaryPassword);
+    const existingUserId = await this.usersRepository.findUserIdByEmail(email);
     const tenantId = randomUUID();
     const encryptionKey =
       await this.tenantKeyService.prepareInitialKey(tenantId);
-    const result = await this.usersRepository.createTenantWithFirstUser({
+
+    let temporaryPassword: string | undefined;
+    let user: CreateTenantWithAdminUserInput['user'];
+
+    if (existingUserId) {
+      user = { existingUserId };
+    } else {
+      temporaryPassword = generateTemporaryPassword();
+      user = {
+        name: command.dto.user.name,
+        email,
+        password: await hashPassword(temporaryPassword),
+      };
+    }
+
+    const result = await this.usersRepository.createTenantWithAdminUser({
       tenant: {
         name: command.dto.tenant.name,
         personName: command.dto.tenant.personName,
@@ -61,18 +65,16 @@ export class CreateTenantHandler implements ICommandHandler<
         zip: command.dto.tenant.zip,
         tax: command.dto.tenant.tax,
       },
-      user: {
-        name: command.dto.user.name,
-        email,
-        password,
-      },
+      user,
       encryptionKey,
     });
 
-    await this.mailQueueService.queueTenantUserCreatedEmail({
-      userId: result.userId,
-      temporaryPassword,
-    });
+    if (temporaryPassword) {
+      await this.mailQueueService.queueTenantUserCreatedEmail({
+        userId: result.userId,
+        temporaryPassword,
+      });
+    }
 
     return apiSuccess(result);
   }

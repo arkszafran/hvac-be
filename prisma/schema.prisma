@@ -164,10 +164,10 @@ model ServiceOrder {
   tenantId                      String                        @db.Uuid
   customerId                    String?                       @db.Uuid
   customerType                  CustomerType
-  customerSnapshotCiphertext    Bytes
-  customerSnapshotNonce         Bytes
-  customerSnapshotKeyVersion    Int
-  customerSnapshotFormatVersion Int                           @default(1)
+  customerSnapshotCiphertext    Bytes?
+  customerSnapshotNonce         Bytes?
+  customerSnapshotKeyVersion    Int?
+  customerSnapshotFormatVersion Int?
   type                          ServiceOrderType
   source                        ServiceOrderSource
   status                        ServiceOrderStatus
@@ -179,7 +179,7 @@ model ServiceOrder {
   updatedAt                     DateTime                      @default(now()) @updatedAt @db.Timestamptz(6)
   tenant                        Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer                      Customer?                     @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
-  customerSnapshotEncryptionKey TenantEncryptionKey           @relation("ServiceOrderCustomerSnapshotEncryptionKey", fields: [tenantId, customerSnapshotKeyVersion], references: [tenantId, version], onDelete: Restrict)
+  customerSnapshotEncryptionKey TenantEncryptionKey?          @relation("ServiceOrderCustomerSnapshotEncryptionKey", fields: [tenantId, customerSnapshotKeyVersion], references: [tenantId, version], onDelete: Restrict)
   assignee                      User?                         @relation("ServiceOrderAssignee", fields: [assigneeUserId], references: [id], onDelete: Restrict)
   installationData              InstallationServiceOrderData?
   rooms                         ServiceOrderRoom[]
@@ -222,9 +222,9 @@ model ServiceOrderDevice {
   id                String            @id @default(uuid()) @db.Uuid
   serviceOrderId    String            @db.Uuid
   systemDeviceId    String?           @db.Uuid
-  deviceType        DeviceType
-  brand             String
-  model             String
+  deviceType        DeviceType?
+  brand             String?
+  model             String?
   serialNumber      String?
   refrigerant       String?
   refrigerantAmount String?

@@ -10,7 +10,17 @@ import type { WrappedTenantDek } from '../../../common/encryption/encryption.typ
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { toPrismaBytes } from '../../../common/prisma/prisma-bytes';
 
-export type CreateTenantWithFirstUserInput = {
+type NewTenantAdminUserInput = {
+  readonly name: string;
+  readonly email: string;
+  readonly password: string;
+};
+
+type ExistingTenantAdminUserInput = {
+  readonly existingUserId: string;
+};
+
+export type CreateTenantWithAdminUserInput = {
   readonly tenant: {
     readonly name: string;
     readonly personName: string;
@@ -19,15 +29,11 @@ export type CreateTenantWithFirstUserInput = {
     readonly zip: string;
     readonly tax: string;
   };
-  readonly user: {
-    readonly name: string;
-    readonly email: string;
-    readonly password: string;
-  };
+  readonly user: NewTenantAdminUserInput | ExistingTenantAdminUserInput;
   readonly encryptionKey: WrappedTenantDek;
 };
 
-export type CreateTenantWithFirstUserResult = {
+export type CreateTenantWithAdminUserResult = {
   readonly tenantId: string;
   readonly userId: string;
 };
@@ -51,18 +57,18 @@ export class UsersRepository {
     });
   }
 
-  async hasUserWithEmail(email: string): Promise<boolean> {
+  async findUserIdByEmail(email: string): Promise<string | null> {
     const user = await this.prisma.user.findFirst({
       where: { email },
       select: { id: true },
     });
 
-    return !!user;
+    return user?.id ?? null;
   }
 
-  async createTenantWithFirstUser(
-    input: CreateTenantWithFirstUserInput,
-  ): Promise<CreateTenantWithFirstUserResult> {
+  async createTenantWithAdminUser(
+    input: CreateTenantWithAdminUserInput,
+  ): Promise<CreateTenantWithAdminUserResult> {
     return this.prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
@@ -88,20 +94,27 @@ export class UsersRepository {
         },
       });
 
-      const user = await tx.user.create({
-        data: {
-          name: input.user.name,
-          email: input.user.email,
-          password: input.user.password,
-          status: UserStatus.new,
-          role: UserRole.TENANT_USER,
-        },
-        select: { id: true },
-      });
+      let userId: string;
+
+      if ('existingUserId' in input.user) {
+        userId = input.user.existingUserId;
+      } else {
+        const user = await tx.user.create({
+          data: {
+            name: input.user.name,
+            email: input.user.email,
+            password: input.user.password,
+            status: UserStatus.new,
+            role: UserRole.TENANT_USER,
+          },
+          select: { id: true },
+        });
+        userId = user.id;
+      }
 
       await tx.user_tenant.create({
         data: {
-          userId: user.id,
+          userId,
           tenantId: tenant.id,
           role: UserTenantRole.ADMIN,
         },
@@ -109,7 +122,7 @@ export class UsersRepository {
 
       return {
         tenantId: tenant.id,
-        userId: user.id,
+        userId,
       };
     });
   }

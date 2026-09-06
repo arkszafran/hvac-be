@@ -11,7 +11,6 @@ import { CommandBus } from '@nestjs/cqrs';
 import {
   ApiBadRequestResponse,
   ApiBody,
-  ApiConflictResponse,
   ApiCookieAuth,
   ApiCreatedResponse,
   ApiOkResponse,
@@ -52,16 +51,12 @@ export class UsersController {
   @HttpCode(201)
   @UseGuards(AuthGuard, RoleAuthGuard)
   @AuthRoles({ userRole: UserRole.ADMIN })
-  @ApiOperation({ summary: 'Create tenant and first tenant admin user' })
+  @ApiOperation({ summary: 'Create tenant and assign its admin user' })
   @ApiCookieAuth(AUTH_COOKIE_NAMES.accessToken)
   @ApiBody({ type: CreateTenantDto })
   @ApiCreatedResponse({
     type: CreateTenantResponseDto,
-    description: 'Tenant and first user were created.',
-  })
-  @ApiConflictResponse({
-    type: UsersErrorResponseDto,
-    description: 'User email already exists.',
+    description: 'Tenant was created and its admin user was assigned.',
   })
   createTenant(@Body() dto: CreateTenantDto) {
     return this.commandBus.execute(new CreateTenantCommand(dto));

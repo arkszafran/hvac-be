@@ -11,6 +11,8 @@ import { OriginGuard } from './common/security/origin/origin.guard';
 import { UsersModule } from './modules/users/users.module';
 import { AuthSecurityModule } from '@auth';
 import { CustomersModule } from './modules/customers/customers.module';
+import { ServiceOrdersModule } from './modules/service-orders/service-orders.module';
+import { DevicesModule } from './modules/devices/devices.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { CustomersModule } from './modules/customers/customers.module';
     AuthenticationModule,
     UsersModule,
     CustomersModule,
+    ServiceOrdersModule,
+    DevicesModule,
   ],
   providers: [
     {

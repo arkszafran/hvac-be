@@ -1,10 +1,7 @@
-import { ConflictException } from '@nestjs/common';
-
 import {
   generateTemporaryPassword,
   hashPassword,
 } from '../../../../common/security/password/password';
-import { USERS_ERROR_CODES } from '../../users.constants';
 import { CreateTenantCommand } from '../impl/create-tenant.command';
 import { CreateTenantHandler } from './create-tenant.handler';
 
@@ -21,8 +18,8 @@ const hashPasswordMock = jest.mocked(hashPassword);
 
 describe('CreateTenantHandler', () => {
   let usersRepository: {
-    hasUserWithEmail: jest.Mock;
-    createTenantWithFirstUser: jest.Mock;
+    findUserIdByEmail: jest.Mock;
+    createTenantWithAdminUser: jest.Mock;
   };
   let mailQueueService: {
     queueTenantUserCreatedEmail: jest.Mock;
@@ -35,8 +32,8 @@ describe('CreateTenantHandler', () => {
 
   beforeEach(() => {
     usersRepository = {
-      hasUserWithEmail: jest.fn(),
-      createTenantWithFirstUser: jest.fn(),
+      findUserIdByEmail: jest.fn(),
+      createTenantWithAdminUser: jest.fn(),
     };
     mailQueueService = {
       queueTenantUserCreatedEmail: jest.fn(),
@@ -71,8 +68,8 @@ describe('CreateTenantHandler', () => {
   });
 
   it('creates tenant, first user and queues welcome email', async () => {
-    usersRepository.hasUserWithEmail.mockResolvedValue(false);
-    usersRepository.createTenantWithFirstUser.mockResolvedValue({
+    usersRepository.findUserIdByEmail.mockResolvedValue(null);
+    usersRepository.createTenantWithAdminUser.mockResolvedValue({
       tenantId: 'tenant-id',
       userId: 'user-id',
     });
@@ -88,7 +85,10 @@ describe('CreateTenantHandler', () => {
     });
 
     expect(preparedTenantId).toEqual(expect.any(String));
-    expect(usersRepository.createTenantWithFirstUser).toHaveBeenCalledWith({
+    expect(usersRepository.findUserIdByEmail).toHaveBeenCalledWith(
+      'user@example.com',
+    );
+    expect(usersRepository.createTenantWithAdminUser).toHaveBeenCalledWith({
       tenant: {
         name: 'Tenant',
         personName: 'Owner',
@@ -116,20 +116,49 @@ describe('CreateTenantHandler', () => {
     });
   });
 
-  it('throws conflict when email already exists', async () => {
-    usersRepository.hasUserWithEmail.mockResolvedValue(true);
+  it('links an existing user to the new tenant without changing credentials', async () => {
+    usersRepository.findUserIdByEmail.mockResolvedValue('existing-user-id');
+    usersRepository.createTenantWithAdminUser.mockResolvedValue({
+      tenantId: 'tenant-id',
+      userId: 'existing-user-id',
+    });
 
-    const result = handler.execute(new CreateTenantCommand(createDto()));
-
-    await expect(result).rejects.toMatchObject({
-      response: {
-        error: {
-          code: USERS_ERROR_CODES.emailAlreadyExists,
-        },
+    await expect(
+      handler.execute(new CreateTenantCommand(createDto())),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        tenantId: 'tenant-id',
+        userId: 'existing-user-id',
       },
     });
-    await expect(result).rejects.toBeInstanceOf(ConflictException);
-    expect(tenantKeyService.prepareInitialKey).not.toHaveBeenCalled();
+
+    expect(usersRepository.findUserIdByEmail).toHaveBeenCalledWith(
+      'user@example.com',
+    );
+    expect(usersRepository.createTenantWithAdminUser).toHaveBeenCalledWith({
+      tenant: {
+        name: 'Tenant',
+        personName: 'Owner',
+        street: 'Street 1',
+        city: 'City',
+        zip: '00-001',
+        tax: '1234567890',
+      },
+      user: {
+        existingUserId: 'existing-user-id',
+      },
+      encryptionKey: {
+        tenantId: preparedTenantId,
+        version: 1,
+        wrappedDek: Buffer.from('wrapped-dek'),
+        kekKeyName: 'kms-key',
+        kekKeyVersion: 'kms-key/cryptoKeyVersions/1',
+      },
+    });
+    expect(generateTemporaryPasswordMock).not.toHaveBeenCalled();
+    expect(hashPasswordMock).not.toHaveBeenCalled();
+    expect(mailQueueService.queueTenantUserCreatedEmail).not.toHaveBeenCalled();
   });
 });
 

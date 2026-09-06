@@ -69,14 +69,25 @@ export class TenantPiiRotationRepository {
     });
 
     if (serviceOrders.length) {
-      return serviceOrders.map((record) => ({
-        id: record.id,
-        purpose: ENCRYPTION_PURPOSES.serviceOrderCustomerSnapshot,
-        ciphertext: Buffer.from(record.customerSnapshotCiphertext),
-        nonce: Buffer.from(record.customerSnapshotNonce),
-        keyVersion: record.customerSnapshotKeyVersion,
-        formatVersion: record.customerSnapshotFormatVersion,
-      }));
+      return serviceOrders.map((record) => {
+        if (
+          !record.customerSnapshotCiphertext ||
+          !record.customerSnapshotNonce ||
+          record.customerSnapshotKeyVersion === null ||
+          record.customerSnapshotFormatVersion === null
+        ) {
+          throw new Error('Service order customer snapshot is incomplete.');
+        }
+
+        return {
+          id: record.id,
+          purpose: ENCRYPTION_PURPOSES.serviceOrderCustomerSnapshot,
+          ciphertext: Buffer.from(record.customerSnapshotCiphertext),
+          nonce: Buffer.from(record.customerSnapshotNonce),
+          keyVersion: record.customerSnapshotKeyVersion,
+          formatVersion: record.customerSnapshotFormatVersion,
+        };
+      });
     }
 
     const devices = await this.prisma.device.findMany({
