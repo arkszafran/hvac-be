@@ -8,8 +8,8 @@ import type {
 } from '@generated/prisma/enums';
 
 export type DeviceCustomerPii = {
-  readonly companyName: string;
-  readonly fullName: string;
+  readonly companyName: string | null;
+  readonly fullName: string | null;
   readonly phone: string;
   readonly email: string;
   readonly address: string;
@@ -120,13 +120,25 @@ export function parseDeviceCustomerPii(value: unknown): DeviceCustomerPii {
     'city',
   ] as const;
 
-  if (fields.some((field) => typeof value[field] !== 'string')) {
+  if (
+    fields.some((field) => {
+      const fieldValue = value[field];
+
+      return (
+        typeof fieldValue !== 'string' &&
+        !(
+          (field === 'companyName' || field === 'fullName') &&
+          fieldValue === null
+        )
+      );
+    })
+  ) {
     throw new Error('Decrypted customer PII is invalid.');
   }
 
   return {
-    companyName: value.companyName as string,
-    fullName: value.fullName as string,
+    companyName: value.companyName as string | null,
+    fullName: value.fullName as string | null,
     phone: value.phone as string,
     email: value.email as string,
     address: value.address as string,

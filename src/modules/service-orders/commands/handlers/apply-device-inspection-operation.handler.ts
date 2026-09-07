@@ -149,33 +149,21 @@ export class ApplyDeviceInspectionOperationHandler implements ICommandHandler<
   private async rescheduleInspection(
     context: InspectionOperationContext,
     input: {
-      readonly serviceOrderId: string;
+      readonly currentServiceOrderId: string;
       readonly scheduledAt: string;
-      readonly confirmSharedOrderChange: boolean;
     },
     transaction: ServiceOrdersTransactionClient,
   ): Promise<void> {
     const inspection = await this.getValidInspection(
       context,
-      input.serviceOrderId,
+      input.currentServiceOrderId,
       transaction,
     );
     this.ensureDeviceAttached(inspection, context.deviceId);
 
-    if (inspection.deviceIds.length > 1 && !input.confirmSharedOrderChange) {
-      throw new ConflictException(
-        apiError({
-          code: SERVICE_ORDERS_ERROR_CODES.sharedInspectionConfirmationRequired,
-          message:
-            'Changing the date affects other devices assigned to this inspection.',
-          details: { deviceCount: inspection.deviceIds.length },
-        }),
-      );
-    }
-
     await this.repository.rescheduleInspection(
       context.tenantId,
-      input.serviceOrderId,
+      input.currentServiceOrderId,
       new Date(input.scheduledAt),
       transaction,
     );

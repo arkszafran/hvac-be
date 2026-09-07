@@ -84,6 +84,7 @@ describe('UpdateCustomerHandler', () => {
 
     const result = await handler.execute(
       new UpdateCustomerCommand('tenant-1', 'customer-1', {
+        companyName: null,
         city: 'Łódź',
       }),
     );
@@ -105,7 +106,7 @@ describe('UpdateCustomerHandler', () => {
       recordId: 'customer-1',
       purpose: ENCRYPTION_PURPOSES.customerPii,
       value: {
-        companyName: 'Old Company',
+        companyName: null,
         fullName: 'Jan Kowalski',
         phone: '500600700',
         email: 'jan@example.com',

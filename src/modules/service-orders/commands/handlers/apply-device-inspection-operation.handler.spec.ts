@@ -1,4 +1,3 @@
-import { ConflictException } from '@nestjs/common';
 import { CustomerType, ServiceOrderStatus } from '@generated/prisma/enums';
 
 import type { InspectionOperationContext } from '../../service-orders.types';
@@ -85,7 +84,7 @@ describe('ApplyDeviceInspectionOperationHandler', () => {
     );
   });
 
-  it('requires confirmation before rescheduling a shared inspection', async () => {
+  it('reschedules a shared inspection without requiring confirmation', async () => {
     const repository = createRepositoryMock();
     repository.findInspectionForMutation.mockResolvedValue({
       id: 'order-1',
@@ -99,21 +98,24 @@ describe('ApplyDeviceInspectionOperationHandler', () => {
       >[0],
     );
 
-    await expect(
-      handler.execute(
-        new ApplyDeviceInspectionOperationCommand(
-          context,
-          {
-            action: 'reschedule_inspection',
-            serviceOrderId: 'order-1',
-            scheduledAt: '2027-03-01T09:00:00.000Z',
-            confirmSharedOrderChange: false,
-          },
-          transaction as never,
-        ),
+    await handler.execute(
+      new ApplyDeviceInspectionOperationCommand(
+        context,
+        {
+          action: 'reschedule_inspection',
+          currentServiceOrderId: 'order-1',
+          scheduledAt: '2027-03-01T09:00:00.000Z',
+        },
+        transaction as never,
       ),
-    ).rejects.toBeInstanceOf(ConflictException);
-    expect(repository.rescheduleInspection).not.toHaveBeenCalled();
+    );
+
+    expect(repository.rescheduleInspection).toHaveBeenCalledWith(
+      context.tenantId,
+      'order-1',
+      new Date('2027-03-01T09:00:00.000Z'),
+      transaction,
+    );
   });
 });
 

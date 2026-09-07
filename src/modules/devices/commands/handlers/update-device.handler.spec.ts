@@ -132,8 +132,9 @@ describe('UpdateDeviceHandler', () => {
       new UpdateDeviceCommand('tenant-1', 'device-1', {
         brand: 'Mitsubishi',
         serviceOrder: {
-          action: UpdateDeviceServiceOrderAction.detachInspection,
-          serviceOrderId: 'order-1',
+          action: UpdateDeviceServiceOrderAction.rescheduleInspection,
+          currentServiceOrderId: 'order-1',
+          scheduledAt: '2027-03-27T15:00',
         },
       }),
     );
@@ -154,8 +155,9 @@ describe('UpdateDeviceHandler', () => {
       deviceId: 'device-1',
     });
     expect(nestedCommand!.operation).toEqual({
-      action: 'detach_inspection',
-      serviceOrderId: 'order-1',
+      action: 'reschedule_inspection',
+      currentServiceOrderId: 'order-1',
+      scheduledAt: '2027-03-27T15:00',
     });
     expect(piiCipher.encryptJson).not.toHaveBeenCalled();
     expect(result).toEqual({ success: true, data: { device: mappedDevice } });

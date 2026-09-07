@@ -1,8 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
+  IsOptional,
   IsString,
   MaxLength,
   MinLength,
@@ -17,19 +18,29 @@ export class CreateCustomerDto {
   @IsEnum(CustomerType)
   type: CustomerType;
 
-  @ApiProperty({ example: 'Klimat Sp. z o.o.', maxLength: 255 })
+  @ApiPropertyOptional({
+    type: String,
+    example: 'Klimat Sp. z o.o.',
+    maxLength: 255,
+    nullable: true,
+  })
   @Transform(trim)
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(255)
-  companyName: string;
+  companyName?: string | null;
 
-  @ApiProperty({ example: 'Jan Kowalski', maxLength: 255 })
+  @ApiPropertyOptional({
+    type: String,
+    example: 'Jan Kowalski',
+    maxLength: 255,
+    nullable: true,
+  })
   @Transform(trim)
+  @IsOptional()
   @IsString()
-  @MinLength(1)
   @MaxLength(255)
-  fullName: string;
+  fullName?: string | null;
 
   @ApiProperty({ example: '+48 500 600 700', maxLength: 32 })
   @Transform(trim)

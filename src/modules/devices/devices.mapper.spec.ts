@@ -108,7 +108,7 @@ describe('DevicesMapper', () => {
 
     expect(
       mapper.mapCustomer(customer as never, {
-        companyName: '',
+        companyName: null,
         fullName: 'Jan Kowalski',
         phone: '500600700',
         email: 'jan@example.com',
@@ -116,7 +116,11 @@ describe('DevicesMapper', () => {
         postalCode: '00-001',
         city: 'Warszawa',
       }),
-    ).toMatchObject({ id: 'customer-1', fullName: 'Jan Kowalski' });
+    ).toMatchObject({
+      id: 'customer-1',
+      companyName: null,
+      fullName: 'Jan Kowalski',
+    });
   });
 
   it('calculates warranty end and handles a disabled warranty', () => {

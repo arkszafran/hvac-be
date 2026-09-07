@@ -19,11 +19,11 @@ export class CustomerListItemDto {
   @ApiProperty({ enum: CustomerType })
   type: CustomerType;
 
-  @ApiProperty()
-  companyName: string;
+  @ApiProperty({ type: String, nullable: true })
+  companyName: string | null;
 
-  @ApiProperty()
-  fullName: string;
+  @ApiProperty({ type: String, nullable: true })
+  fullName: string | null;
 
   @ApiProperty()
   phone: string;

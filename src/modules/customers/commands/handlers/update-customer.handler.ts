@@ -55,8 +55,14 @@ export class UpdateCustomerHandler implements ICommandHandler<
       }),
     );
     const pii = buildCustomerPii({
-      companyName: command.dto.companyName ?? currentPii.companyName,
-      fullName: command.dto.fullName ?? currentPii.fullName,
+      companyName:
+        command.dto.companyName === undefined
+          ? currentPii.companyName
+          : command.dto.companyName,
+      fullName:
+        command.dto.fullName === undefined
+          ? currentPii.fullName
+          : command.dto.fullName,
       phone: command.dto.phone ?? currentPii.phone,
       email: command.dto.email ?? currentPii.email,
       address: command.dto.address ?? currentPii.address,

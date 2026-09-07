@@ -124,8 +124,10 @@ function filterCustomers(
       customer.address,
       customer.postalCode,
       customer.city,
-    ].some((value) =>
-      normalizeCustomerSearchValue(value).includes(normalizedPhrase),
+    ].some(
+      (value) =>
+        value !== null &&
+        normalizeCustomerSearchValue(value).includes(normalizedPhrase),
     ),
   );
 }

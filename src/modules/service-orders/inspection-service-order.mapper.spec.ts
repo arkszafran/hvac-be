@@ -15,7 +15,7 @@ describe('InspectionServiceOrderMapper', () => {
           Promise.resolve(
             purpose === ENCRYPTION_PURPOSES.customerPii
               ? {
-                  companyName: '',
+                  companyName: null,
                   fullName: 'Jan Kowalski',
                   phone: '500600700',
                   email: 'jan@example.com',

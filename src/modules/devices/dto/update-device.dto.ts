@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsOptional,
@@ -30,16 +29,17 @@ export class UpdateDeviceServiceOrderCommandDto {
     [
       UpdateDeviceServiceOrderAction.attachInspection,
       UpdateDeviceServiceOrderAction.detachInspection,
-      UpdateDeviceServiceOrderAction.rescheduleInspection,
     ].includes(dto.action),
   )
   @IsUUID('4')
   serviceOrderId?: string;
 
   @ApiPropertyOptional({ format: 'uuid' })
-  @ValidateIf(
-    (dto: UpdateDeviceServiceOrderCommandDto) =>
-      dto.action === UpdateDeviceServiceOrderAction.moveToNewInspection,
+  @ValidateIf((dto: UpdateDeviceServiceOrderCommandDto) =>
+    [
+      UpdateDeviceServiceOrderAction.rescheduleInspection,
+      UpdateDeviceServiceOrderAction.moveToNewInspection,
+    ].includes(dto.action),
   )
   @IsUUID('4')
   currentServiceOrderId?: string;
@@ -54,14 +54,6 @@ export class UpdateDeviceServiceOrderCommandDto {
   )
   @IsDateString()
   scheduledAt?: string;
-
-  @ApiPropertyOptional()
-  @ValidateIf(
-    (dto: UpdateDeviceServiceOrderCommandDto) =>
-      dto.action === UpdateDeviceServiceOrderAction.rescheduleInspection,
-  )
-  @IsBoolean()
-  confirmSharedOrderChange?: boolean;
 }
 
 export class UpdateDeviceDto extends PartialType(DeviceWriteDto) {

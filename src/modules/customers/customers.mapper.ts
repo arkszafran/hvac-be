@@ -11,10 +11,15 @@ import type {
   StoredServiceOrder,
 } from './customers.types';
 
-export function buildCustomerPii(input: CustomerPii): CustomerPii {
+type CustomerPiiInput = Omit<CustomerPii, 'companyName' | 'fullName'> & {
+  readonly companyName?: string | null;
+  readonly fullName?: string | null;
+};
+
+export function buildCustomerPii(input: CustomerPiiInput): CustomerPii {
   return {
-    companyName: input.companyName.trim(),
-    fullName: input.fullName.trim(),
+    companyName: normalizeOptionalName(input.companyName),
+    fullName: normalizeOptionalName(input.fullName),
     phone: input.phone.trim(),
     email: input.email.trim().normalize('NFC'),
     address: input.address.trim(),
@@ -69,12 +74,20 @@ export function mapCustomerServiceOrderDto(
 
 export function getCustomerDisplayName(customer: {
   readonly type: CustomerType;
-  readonly companyName: string;
-  readonly fullName: string;
+  readonly companyName: string | null;
+  readonly fullName: string | null;
 }): string {
-  return customer.type === CustomerType.company
-    ? customer.companyName
-    : customer.fullName;
+  return (
+    (customer.type === CustomerType.company
+      ? customer.companyName
+      : customer.fullName) ?? ''
+  );
+}
+
+function normalizeOptionalName(value?: string | null): string | null {
+  const normalizedValue = value?.trim();
+
+  return normalizedValue || null;
 }
 
 export function normalizeCustomerSearchValue(value: string): string {

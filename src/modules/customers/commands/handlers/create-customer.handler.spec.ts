@@ -104,4 +104,71 @@ describe('CreateCustomerHandler', () => {
       }),
     );
   });
+
+  it('allows names to be omitted and stores them as null', async () => {
+    const encryptedPii = {
+      ciphertext: Buffer.from('ciphertext'),
+      nonce: Buffer.alloc(12),
+      keyVersion: 2,
+      formatVersion: 1,
+    };
+    const customersRepository = {
+      generateId: jest.fn().mockResolvedValue('customer-1'),
+      hasEmailLookupHash: jest.fn().mockResolvedValue(false),
+      create: jest.fn().mockImplementation((input: { id: string }) => ({
+        id: input.id,
+        tenantId: 'tenant-1',
+        type: CustomerType.individual,
+        createdAt: new Date('2026-09-04T10:00:00.000Z'),
+        updatedAt: new Date('2026-09-04T10:00:00.000Z'),
+      })),
+    };
+    const piiCipher = {
+      encryptJson: jest.fn().mockResolvedValue(encryptedPii),
+    };
+    const emailLookupService = {
+      create: jest.fn().mockReturnValue({
+        hash: Buffer.alloc(32),
+        keyVersion: 4,
+      }),
+    };
+    const handler = new CreateCustomerHandler(
+      customersRepository as unknown as ConstructorParameters<
+        typeof CreateCustomerHandler
+      >[0],
+      piiCipher as unknown as ConstructorParameters<
+        typeof CreateCustomerHandler
+      >[1],
+      emailLookupService as unknown as ConstructorParameters<
+        typeof CreateCustomerHandler
+      >[2],
+    );
+
+    const result = await handler.execute(
+      new CreateCustomerCommand('tenant-1', {
+        type: CustomerType.individual,
+        phone: '500600700',
+        email: 'jan@example.com',
+        address: 'Długa 1',
+        postalCode: '00-001',
+        city: 'Warszawa',
+      }),
+    );
+
+    expect(result.data).toMatchObject({ companyName: null, fullName: null });
+    expect(piiCipher.encryptJson).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      recordId: 'customer-1',
+      purpose: ENCRYPTION_PURPOSES.customerPii,
+      value: {
+        companyName: null,
+        fullName: null,
+        phone: '500600700',
+        email: 'jan@example.com',
+        address: 'Długa 1',
+        postalCode: '00-001',
+        city: 'Warszawa',
+      },
+    });
+  });
 });

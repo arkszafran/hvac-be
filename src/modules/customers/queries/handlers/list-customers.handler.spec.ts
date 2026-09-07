@@ -17,7 +17,7 @@ describe('ListCustomersHandler', () => {
     storedCustomer('customer-1', CustomerType.company),
     storedCustomer('customer-2', CustomerType.individual),
   ];
-  const piiByCustomerId: Record<string, Record<string, string>> = {
+  const piiByCustomerId: Record<string, Record<string, string | null>> = {
     'customer-1': {
       companyName: 'Żuraw Serwis',
       fullName: 'Adam Nowak',
@@ -28,7 +28,7 @@ describe('ListCustomersHandler', () => {
       city: 'Łódź',
     },
     'customer-2': {
-      companyName: '',
+      companyName: null,
       fullName: 'Beata Kowalska',
       phone: '444555666',
       email: 'beata@example.com',

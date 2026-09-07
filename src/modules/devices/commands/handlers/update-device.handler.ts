@@ -207,9 +207,8 @@ function mapServiceOrderOperation(
     case UpdateDeviceServiceOrderAction.rescheduleInspection:
       return {
         action: 'reschedule_inspection',
-        serviceOrderId: command.serviceOrderId!,
+        currentServiceOrderId: command.currentServiceOrderId!,
         scheduledAt: command.scheduledAt!,
-        confirmSharedOrderChange: command.confirmSharedOrderChange!,
       };
     case UpdateDeviceServiceOrderAction.moveToNewInspection:
       return {
