@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -17,6 +18,7 @@ import {
   ApiConsumes,
   ApiCookieAuth,
   ApiCreatedResponse,
+  ApiExtraModels,
   ApiForbiddenResponse,
   ApiHeader,
   ApiNotFoundResponse,
@@ -24,6 +26,7 @@ import {
   ApiOperation,
   ApiParam,
   ApiProduces,
+  ApiQuery,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
@@ -41,13 +44,19 @@ import { CreateDeviceCommand } from '../commands/impl/create-device.command';
 import { UpdateDeviceCommand } from '../commands/impl/update-device.command';
 import { CreateDeviceDto } from '../dto/create-device.dto';
 import {
+  ClientFilteredDevicesDto,
   CreateDeviceResponseDto,
   DeviceDetailsResponseDto,
   DevicesErrorResponseDto,
+  DevicesListResponseDto,
+  PaginationResponseDto,
+  ServerFilteredDevicesDto,
   UpdateDeviceResponseDto,
 } from '../dto/device-response.dto';
+import { DevicesListQueryDto } from '../dto/devices-list-query.dto';
 import { UpdateDeviceDto } from '../dto/update-device.dto';
 import { GetDeviceDetailsQuery } from '../queries/impl/get-device-details.query';
+import { ListDevicesQuery } from '../queries/impl/list-devices.query';
 
 @ApiTags('devices')
 @ApiCookieAuth(AUTH_COOKIE_NAMES.accessToken)
@@ -57,6 +66,11 @@ import { GetDeviceDetailsQuery } from '../queries/impl/get-device-details.query'
   required: true,
   description: 'Tenant selected by the authenticated user.',
 })
+@ApiExtraModels(
+  ClientFilteredDevicesDto,
+  ServerFilteredDevicesDto,
+  PaginationResponseDto,
+)
 @UseGuards(AuthGuard, TenantGuard, RoleAuthGuard)
 @AuthRoles({ userRole: UserRole.TENANT_USER })
 @Controller('devices')
@@ -65,6 +79,27 @@ export class DevicesController {
     private readonly commandBus: CommandBus,
     private readonly queryBus: QueryBus,
   ) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List devices with their customers' })
+  @ApiQuery({ name: 'q', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number, minimum: 1 })
+  @ApiOkResponse({
+    type: DevicesListResponseDto,
+    description: 'Devices returned in client- or server-filtered mode.',
+  })
+  @ApiBadRequestResponse({
+    type: DevicesErrorResponseDto,
+    description: 'Query parameters are invalid.',
+  })
+  @ApiUnauthorizedResponse({ type: DevicesErrorResponseDto })
+  @ApiForbiddenResponse({ type: DevicesErrorResponseDto })
+  list(
+    @TenantId() tenantId: string,
+    @Query() dto: DevicesListQueryDto,
+  ): Promise<DevicesListResponseDto> {
+    return this.queryBus.execute(new ListDevicesQuery(tenantId, dto));
+  }
 
   @Get(':deviceId')
   @ApiOperation({ summary: 'Get device details with inspection and visits' })

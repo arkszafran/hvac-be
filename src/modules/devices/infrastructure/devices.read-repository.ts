@@ -9,6 +9,7 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 import type {
   StoredDevice,
   StoredDeviceInspection,
+  StoredDeviceListItem,
   StoredDeviceVisit,
 } from '../devices.types';
 
@@ -17,6 +18,31 @@ type DevicesReadTransactionClient = Prisma.TransactionClient;
 @Injectable()
 export class DevicesReadRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(
+    tenantId: string,
+    transaction?: DevicesReadTransactionClient,
+  ): Promise<StoredDeviceListItem[]> {
+    const db = transaction ?? this.prisma;
+    const rows = await db.device.findMany({
+      where: {
+        tenantId,
+        archivedAt: null,
+        customer: { archivedAt: null },
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select: deviceListSelect,
+    });
+
+    return rows.map((row) => ({
+      device: mapStoredDevice(row),
+      customer: {
+        ...row.customer,
+        piiCiphertext: Buffer.from(row.customer.piiCiphertext),
+        piiNonce: Buffer.from(row.customer.piiNonce),
+      },
+    }));
+  }
 
   async findById(
     tenantId: string,
@@ -219,6 +245,23 @@ export const deviceSelect = {
   installationAddressFormatVersion: true,
   createdAt: true,
   updatedAt: true,
+} as const;
+
+const deviceListSelect = {
+  ...deviceSelect,
+  customer: {
+    select: {
+      id: true,
+      tenantId: true,
+      type: true,
+      piiCiphertext: true,
+      piiNonce: true,
+      piiKeyVersion: true,
+      piiFormatVersion: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
 } as const;
 
 type DeviceRow = Prisma.DeviceGetPayload<{ select: typeof deviceSelect }>;

@@ -1,4 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  ApiProperty,
+  ApiPropertyOptional,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import {
   CustomerType,
   DeviceType,
@@ -8,7 +12,10 @@ import {
   VisitType,
 } from '@generated/prisma/enums';
 
-import type { ApiSuccessResponse } from '../../../common/types/api-response.type';
+import type {
+  ApiSuccessResponse,
+  PaginationDto,
+} from '../../../common/types/api-response.type';
 
 export class CustomerSummaryDto {
   @ApiProperty({ format: 'uuid' })
@@ -37,6 +44,101 @@ export class CustomerSummaryDto {
 
   @ApiProperty()
   city: string;
+}
+
+export class DeviceListItemDto {
+  @ApiProperty({ format: 'uuid' })
+  id: string;
+
+  @ApiProperty({ format: 'uuid' })
+  customerId: string;
+
+  @ApiProperty({ enum: DeviceType })
+  type: DeviceType;
+
+  @ApiProperty()
+  brand: string;
+
+  @ApiProperty()
+  model: string;
+
+  @ApiProperty()
+  location: string;
+
+  @ApiProperty()
+  hasCustomInstallationAddress: boolean;
+
+  @ApiProperty()
+  address: string;
+
+  @ApiProperty()
+  postalCode: string;
+
+  @ApiProperty()
+  city: string;
+
+  @ApiProperty({ type: CustomerSummaryDto })
+  customer: CustomerSummaryDto;
+}
+
+export class PaginationResponseDto implements PaginationDto {
+  @ApiProperty({ minimum: 1 })
+  page: number;
+
+  @ApiProperty({ minimum: 1 })
+  pageSize: number;
+
+  @ApiProperty({ minimum: 0 })
+  totalItems: number;
+
+  @ApiProperty({ minimum: 0 })
+  totalPages: number;
+}
+
+export class ClientFilteredDevicesDto {
+  @ApiProperty({ enum: ['client'], example: 'client' })
+  filteringMode: 'client';
+
+  @ApiProperty({ type: [DeviceListItemDto] })
+  items: DeviceListItemDto[];
+
+  @ApiProperty({ minimum: 0 })
+  totalItems: number;
+}
+
+export class ServerFilteredDevicesDto {
+  @ApiProperty({ enum: ['server'], example: 'server' })
+  filteringMode: 'server';
+
+  @ApiProperty({ type: [DeviceListItemDto] })
+  items: DeviceListItemDto[];
+
+  @ApiProperty({ type: PaginationResponseDto })
+  pagination: PaginationDto;
+}
+
+export type DevicesListDataDto =
+  | ClientFilteredDevicesDto
+  | ServerFilteredDevicesDto;
+
+export class DevicesListResponseDto implements ApiSuccessResponse<DevicesListDataDto> {
+  @ApiProperty({ example: true })
+  success: true;
+
+  @ApiProperty({
+    oneOf: [
+      { $ref: getSchemaPath(ClientFilteredDevicesDto) },
+      { $ref: getSchemaPath(ServerFilteredDevicesDto) },
+    ],
+    discriminator: {
+      propertyName: 'filteringMode',
+      mapping: {
+        client: getSchemaPath(ClientFilteredDevicesDto),
+        server: getSchemaPath(ServerFilteredDevicesDto),
+      },
+    },
+  })
+  data: DevicesListDataDto;
 }
 
 export class PhotoAttachmentDto {

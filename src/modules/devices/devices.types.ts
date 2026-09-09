@@ -60,6 +60,11 @@ export type StoredDevice = {
   readonly updatedAt: Date;
 };
 
+export type StoredDeviceListItem = {
+  readonly device: StoredDevice;
+  readonly customer: StoredDeviceCustomer;
+};
+
 export type StoredDeviceVisit = {
   readonly id: string;
   readonly serviceOrderId: string | null;

@@ -6,6 +6,7 @@ import type { TenantPiiCipherService } from '../tenant-encryption/tenant-pii-cip
 import type {
   CustomerSummaryDto,
   DeviceDto,
+  DeviceListItemDto,
   DeviceVisitDto,
   InspectionServiceOrderDto,
   RelatedInspectionDeviceDto,
@@ -121,6 +122,33 @@ export class DevicesMapper {
       address: pii.address,
       postalCode: pii.postalCode,
       city: pii.city,
+    };
+  }
+
+  async mapDeviceListItem(
+    device: StoredDevice,
+    customer: StoredDeviceCustomer,
+    customerPii: DeviceCustomerPii,
+    piiCipher: TenantPiiCipherService,
+  ): Promise<DeviceListItemDto> {
+    const installationAddress = device.hasCustomInstallationAddress
+      ? await this.decryptInstallationAddress(device, piiCipher)
+      : {
+          address: customerPii.address,
+          postalCode: customerPii.postalCode,
+          city: customerPii.city,
+        };
+
+    return {
+      id: device.id,
+      customerId: device.customerId,
+      type: device.type,
+      brand: device.brand,
+      model: device.model,
+      location: device.location ?? '',
+      hasCustomInstallationAddress: device.hasCustomInstallationAddress,
+      ...installationAddress,
+      customer: this.mapCustomer(customer, customerPii),
     };
   }
 

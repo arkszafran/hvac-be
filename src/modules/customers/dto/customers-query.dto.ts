@@ -4,6 +4,7 @@ import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export enum CustomersSortBy {
   displayName = 'displayName',
+  createdAt = 'createdAt',
 }
 
 export enum SortDirection {

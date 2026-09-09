@@ -33,6 +33,8 @@ export function validateEnvironment(
   assertPositiveInteger(config, 'PII_DEK_CACHE_MAX_ENTRIES');
   assertPositiveInteger(config, 'CUSTOMERS_CLIENT_FILTERING_LIMIT');
   assertPositiveInteger(config, 'CUSTOMERS_PAGE_SIZE');
+  assertPositiveInteger(config, 'DEVICES_CLIENT_FILTERING_LIMIT');
+  assertPositiveInteger(config, 'DEVICES_PAGE_SIZE');
   assertBase64Bytes(config, 'CUSTOMER_EMAIL_LOOKUP_HMAC_SECRET_BASE64', 32);
   assertPositiveInteger(config, 'CUSTOMER_EMAIL_LOOKUP_HMAC_KEY_VERSION');
   assertRequiredUrl(config, 'PUBLIC_WORKER_BASE_URL');
