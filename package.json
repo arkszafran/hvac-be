@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@google-cloud/kms": "^6.0.0",
+    "@google-cloud/storage": "^8.0.1",
     "@google-cloud/tasks": "^6.2.3",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",

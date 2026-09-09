@@ -304,25 +304,36 @@ model VisitDevice {
 }
 
 model PhotoAttachment {
-  id                   String              @id @default(uuid()) @db.Uuid
-  tenantId             String              @db.Uuid
+  id                   String               @id @default(uuid()) @db.Uuid
+  tenantId             String               @db.Uuid
   fileName             String
-  url                  String
+  objectKey            String               @unique @db.VarChar(1024)
+  contentType          String               @db.VarChar(255)
+  sizeBytes            Int
+  scanStatus           AttachmentScanStatus @default(pending_upload)
+  storageGeneration    String?              @db.VarChar(32)
+  uploadExpiresAt      DateTime             @db.Timestamptz(6)
+  uploadedAt           DateTime?            @db.Timestamptz(6)
+  scanCompletedAt      DateTime?            @db.Timestamptz(6)
+  failureCode          String?              @db.VarChar(64)
   description          String?
-  serviceOrderId       String?             @db.Uuid
-  serviceOrderRoomId   String?             @db.Uuid
-  serviceOrderDeviceId String?             @db.Uuid
-  serviceOrderNoteId   String?             @db.Uuid
-  visitId              String?             @db.Uuid
-  sortOrder            Int                 @default(0)
-  createdAt            DateTime            @default(now()) @db.Timestamptz(6)
-  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  serviceOrder         ServiceOrder?       @relation(fields: [tenantId, serviceOrderId], references: [tenantId, id], onDelete: Cascade)
-  serviceOrderRoom     ServiceOrderRoom?   @relation(fields: [serviceOrderRoomId], references: [id], onDelete: Cascade)
-  serviceOrderDevice   ServiceOrderDevice? @relation(fields: [serviceOrderDeviceId], references: [id], onDelete: Cascade)
-  serviceOrderNote     ServiceOrderNote?   @relation(fields: [serviceOrderNoteId], references: [id], onDelete: Cascade)
-  visit                Visit?              @relation(fields: [tenantId, visitId], references: [tenantId, id], onDelete: Cascade)
+  serviceOrderId       String?              @db.Uuid
+  serviceOrderRoomId   String?              @db.Uuid
+  serviceOrderDeviceId String?              @db.Uuid
+  serviceOrderNoteId   String?              @db.Uuid
+  visitId              String?              @db.Uuid
+  sortOrder            Int                  @default(0)
+  createdAt            DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime             @default(now()) @updatedAt @db.Timestamptz(6)
+  tenant               Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  serviceOrder         ServiceOrder?        @relation(fields: [tenantId, serviceOrderId], references: [tenantId, id], onDelete: Cascade)
+  serviceOrderRoom     ServiceOrderRoom?    @relation(fields: [serviceOrderRoomId], references: [id], onDelete: Cascade)
+  serviceOrderDevice   ServiceOrderDevice?  @relation(fields: [serviceOrderDeviceId], references: [id], onDelete: Cascade)
+  serviceOrderNote     ServiceOrderNote?    @relation(fields: [serviceOrderNoteId], references: [id], onDelete: Cascade)
+  visit                Visit?               @relation(fields: [tenantId, visitId], references: [tenantId, id], onDelete: Cascade)
 
+  @@index([tenantId, scanStatus])
+  @@index([scanStatus, createdAt])
   @@map("photoAttachments")
 }
 
@@ -338,6 +349,17 @@ enum TenantEncryptionKeyStatus {
   retired
 
   @@map("tenantEncryptionKeyStatusEnum")
+}
+
+enum AttachmentScanStatus {
+  pending_upload
+  scanning
+  clean
+  quarantined
+  scan_failed
+  upload_expired
+
+  @@map("attachmentScanStatusEnum")
 }
 
 enum UserRole {

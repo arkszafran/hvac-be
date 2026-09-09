@@ -4,6 +4,7 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import {
+  AttachmentScanStatus,
   CustomerType,
   DeviceType,
   ServiceOrderSource,
@@ -148,8 +149,20 @@ export class PhotoAttachmentDto {
   @ApiProperty()
   fileName: string;
 
-  @ApiProperty()
-  url: string;
+  @ApiProperty({ example: 'image/jpeg' })
+  contentType: string;
+
+  @ApiProperty({ example: 3145728, minimum: 1 })
+  sizeBytes: number;
+
+  @ApiProperty({ enum: AttachmentScanStatus })
+  scanStatus: AttachmentScanStatus;
+
+  @ApiProperty({
+    description:
+      'True only after the malware scanner marked the file as clean.',
+  })
+  canDownload: boolean;
 
   @ApiPropertyOptional()
   description?: string;

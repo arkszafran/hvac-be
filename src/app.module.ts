@@ -13,6 +13,7 @@ import { AuthSecurityModule } from '@auth';
 import { CustomersModule } from './modules/customers/customers.module';
 import { ServiceOrdersModule } from './modules/service-orders/service-orders.module';
 import { DevicesModule } from './modules/devices/devices.module';
+import { AttachmentsModule } from './modules/attachments/attachments.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { DevicesModule } from './modules/devices/devices.module';
     CustomersModule,
     ServiceOrdersModule,
     DevicesModule,
+    AttachmentsModule,
   ],
   providers: [
     {

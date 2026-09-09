@@ -87,7 +87,9 @@ export class DevicesReadRepository {
           select: {
             id: true,
             fileName: true,
-            url: true,
+            contentType: true,
+            sizeBytes: true,
+            scanStatus: true,
             description: true,
           },
         },

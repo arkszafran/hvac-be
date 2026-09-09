@@ -84,6 +84,18 @@ function setupSwagger(app: INestApplication, enabled: boolean): void {
     .addTag('customers')
     .addTag('devices')
     .addTag('service-orders')
+    .addTag('attachments')
+    .addTag('internal-pubsub')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'Google OIDC ID token',
+        description:
+          'Internal Google Pub/Sub authentication. Frontend applications do not use this scheme.',
+      },
+      'pubsubOidc',
+    )
     .addCookieAuth(
       AUTH_COOKIE_NAMES.accessToken,
       undefined,

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { ServiceOrderType } from '@generated/prisma/enums';
+import {
+  AttachmentScanStatus,
+  ServiceOrderType,
+} from '@generated/prisma/enums';
 
 import { ENCRYPTION_PURPOSES } from '../../common/encryption/encryption.types';
 import type { TenantPiiCipherService } from '../tenant-encryption/tenant-pii-cipher.service';
@@ -168,7 +171,10 @@ export class DevicesMapper {
       photos: visit.photos.map((photo) => ({
         id: photo.id,
         fileName: photo.fileName,
-        url: photo.url,
+        contentType: photo.contentType,
+        sizeBytes: photo.sizeBytes,
+        scanStatus: photo.scanStatus,
+        canDownload: photo.scanStatus === AttachmentScanStatus.clean,
         ...(photo.description ? { description: photo.description } : {}),
       })),
       createdAt: visit.createdAt.toISOString(),

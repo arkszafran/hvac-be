@@ -40,6 +40,19 @@ export function validateEnvironment(
   assertRequiredUrl(config, 'PUBLIC_WORKER_BASE_URL');
   assertRequiredString(config, 'QUEUE_JOBS_OIDC_SERVICE_ACCOUNT_EMAIL');
   assertRequiredUrl(config, 'QUEUE_JOBS_OIDC_AUDIENCE');
+  assertRequiredString(config, 'ATTACHMENTS_GCP_PROJECT_ID');
+  assertRequiredString(config, 'ATTACHMENTS_GCP_LOCATION');
+  assertRequiredString(config, 'ATTACHMENTS_UNSCANNED_BUCKET');
+  assertRequiredString(config, 'ATTACHMENTS_CLEAN_BUCKET');
+  assertRequiredString(config, 'ATTACHMENTS_QUARANTINED_BUCKET');
+  assertRequiredString(config, 'ATTACHMENTS_PUBSUB_TOPIC');
+  assertPubSubSubscriptionName(config, 'ATTACHMENTS_PUBSUB_SUBSCRIPTION');
+  assertRequiredString(config, 'ATTACHMENTS_PUBSUB_OIDC_SERVICE_ACCOUNT_EMAIL');
+  assertRequiredUrl(config, 'ATTACHMENTS_PUBSUB_OIDC_AUDIENCE');
+  assertPositiveInteger(config, 'ATTACHMENTS_UPLOAD_EXPIRES_SECONDS');
+  assertPositiveInteger(config, 'ATTACHMENTS_DOWNLOAD_EXPIRES_SECONDS');
+  assertPositiveInteger(config, 'ATTACHMENTS_MAX_FILE_SIZE_BYTES');
+  assertPositiveInteger(config, 'ATTACHMENTS_MAX_FILES_PER_REQUEST');
   assertPositiveInteger(config, 'THROTTLE_TTL_MS');
   assertPositiveInteger(config, 'THROTTLE_LIMIT');
   assertOptionalBoolean(config, 'SWAGGER_ON');
@@ -57,6 +70,23 @@ export function validateEnvironment(
   assertOptionalPositiveInteger(config, 'SMTP_SOCKET_TIMEOUT_MS');
 
   return config;
+}
+
+function assertPubSubSubscriptionName(
+  config: Record<string, unknown>,
+  key: string,
+): void {
+  const value = config[key];
+
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${key} env is required.`);
+  }
+
+  if (!/^projects\/[^/]+\/subscriptions\/[^/]+$/.test(value.trim())) {
+    throw new Error(
+      `${key} env must be a full Pub/Sub subscription resource name.`,
+    );
+  }
 }
 
 function assertBase64Bytes(

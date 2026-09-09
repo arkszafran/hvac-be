@@ -1,4 +1,5 @@
 import type {
+  AttachmentScanStatus,
   CustomerType,
   DeviceType,
   MessageConfirmationStatus,
@@ -76,7 +77,9 @@ export type StoredDeviceVisit = {
   readonly photos: Array<{
     readonly id: string;
     readonly fileName: string;
-    readonly url: string;
+    readonly contentType: string;
+    readonly sizeBytes: number;
+    readonly scanStatus: AttachmentScanStatus;
     readonly description: string | null;
   }>;
   readonly createdAt: Date;
