@@ -275,3 +275,15 @@ const value = await this.piiCipher.decryptJson({
   },
 });
 ```
+
+ServiceOrder
+customerConfirmationStatus oraz confirmationReminderSentAt wylicza się na podstawie ostatniej wiadomości umieszczonej w MessageServiceOrder - zależy od tego czy customer potwierdził czy nie oraz czy wiadomość została wysłana.
+
+## Attachments
+
+- Importuj `AttachmentsModule` w modułach korzystających z załączników.
+- Używaj `AttachmentUploadService` do walidacji plików, przygotowania metadanych i generowania formularzy uploadu.
+- Rekordy zapisuj przez `AttachmentsRepository`; w operacjach biznesowych przekazuj istniejący `Prisma.TransactionClient`.
+- Formularze uploadu generuj dopiero po zatwierdzeniu transakcji.
+- Używaj `AttachmentDownloadService` do walidacji i generowania URL-i pobierania.
+- Nie korzystaj bezpośrednio z `GcsAttachmentsStorageService` poza modułem `Attachments`.

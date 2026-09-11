@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AttachmentScanStatus } from '@generated/prisma/enums';
 
+import { AttachmentUploadService } from '../../attachment-upload.service';
 import type { StoredAttachment } from '../../attachments.types';
 import type { PrepareAttachmentUploadsDto } from '../../dto/prepare-attachment-uploads.dto';
 import type { CreatePendingAttachmentInput } from '../../infrastructure/attachments.repository';
@@ -60,12 +61,14 @@ describe('PrepareAttachmentUploadsHandler', () => {
     };
     handler = new PrepareAttachmentUploadsHandler(
       repository as never,
-      storage as never,
-      new ConfigService({
-        ATTACHMENTS_MAX_FILE_SIZE_BYTES: 10_485_760,
-        ATTACHMENTS_MAX_FILES_PER_REQUEST: 10,
-        ATTACHMENTS_UPLOAD_EXPIRES_SECONDS: 600,
-      }),
+      new AttachmentUploadService(
+        storage as never,
+        new ConfigService({
+          ATTACHMENTS_MAX_FILE_SIZE_BYTES: 10_485_760,
+          ATTACHMENTS_MAX_FILES_PER_REQUEST: 10,
+          ATTACHMENTS_UPLOAD_EXPIRES_SECONDS: 600,
+        }),
+      ),
     );
   });
 
@@ -113,6 +116,7 @@ describe('PrepareAttachmentUploadsHandler', () => {
     expect(result.data.attachments[0].upload.fields.policy).toBe(
       'signed-policy',
     );
+    expect(result.data.attachments[0].upload.method).toBe('POST');
   });
 
   it('rejects a file above the configured size before signing anything', async () => {

@@ -103,7 +103,7 @@ describe('InspectionServiceOrderMapper', () => {
       piiCipher as never,
     );
     expect(withoutMessage.serviceData).toMatchObject({
-      customerConfirmationStatus: 'not_confirmed',
+      customerConfirmationStatus: 'pending',
       confirmationReminderSentAt: null,
     });
   });

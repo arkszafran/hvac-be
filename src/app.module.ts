@@ -14,6 +14,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { ServiceOrdersModule } from './modules/service-orders/service-orders.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { AttachmentsModule } from './modules/attachments/attachments.module';
+import { VisitsModule } from './modules/visits/visits.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AttachmentsModule } from './modules/attachments/attachments.module';
     ServiceOrdersModule,
     DevicesModule,
     AttachmentsModule,
+    VisitsModule,
   ],
   providers: [
     {

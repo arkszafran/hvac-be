@@ -211,7 +211,7 @@ export class DevicesMapper {
         devices,
         customerConfirmationStatus: inspection.lastMessage
           ? (inspection.lastMessage.confirmationStatus ?? 'pending')
-          : 'not_confirmed',
+          : 'pending',
         confirmationReminderSentAt:
           inspection.lastMessage?.date.toISOString() ?? null,
       },

@@ -119,7 +119,7 @@ function mapCustomerConfirmationStatus(
   order: StoredInspectionServiceOrder,
 ): 'pending' | 'confirmed' | 'not_confirmed' {
   if (!order.lastMessage) {
-    return 'not_confirmed';
+    return 'pending';
   }
 
   return order.lastMessage.confirmationStatus ?? 'pending';

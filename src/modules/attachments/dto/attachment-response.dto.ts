@@ -45,6 +45,9 @@ export class AttachmentDto {
 }
 
 export class AttachmentUploadFormDto {
+  @ApiProperty({ enum: ['POST'] })
+  method: 'POST';
+
   @ApiProperty({
     description:
       'Cloud Storage form action. Send multipart/form-data directly to this URL.',

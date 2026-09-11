@@ -4,6 +4,8 @@ import { AuthSecurityModule } from '@auth';
 
 import { PrismaModule } from '../../common/prisma/prisma.module';
 import { PubSubModule } from '../../common/pubsub/pubsub.module';
+import { AttachmentDownloadService } from './attachment-download.service';
+import { AttachmentUploadService } from './attachment-upload.service';
 import { AttachmentsCommandHandlers } from './commands';
 import { AttachmentFileEventsController } from './controllers/attachment-file-events.controller';
 import { AttachmentsController } from './controllers/attachments.controller';
@@ -20,9 +22,16 @@ import { AttachmentsPubSubOidcGuard } from './security/attachments-pubsub-oidc.g
     AttachmentsRepository,
     AttachmentsReadRepository,
     GcsAttachmentsStorageService,
+    AttachmentUploadService,
+    AttachmentDownloadService,
     AttachmentsPubSubOidcGuard,
     ...AttachmentsCommandHandlers,
     ...AttachmentsQueryHandlers,
+  ],
+  exports: [
+    AttachmentsRepository,
+    AttachmentUploadService,
+    AttachmentDownloadService,
   ],
 })
 export class AttachmentsModule {}

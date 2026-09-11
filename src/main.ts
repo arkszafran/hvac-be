@@ -85,6 +85,7 @@ function setupSwagger(app: INestApplication, enabled: boolean): void {
     .addTag('devices')
     .addTag('service-orders')
     .addTag('attachments')
+    .addTag('visits')
     .addTag('internal-pubsub')
     .addBearerAuth(
       {

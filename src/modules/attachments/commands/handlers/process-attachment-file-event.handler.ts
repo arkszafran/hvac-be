@@ -10,11 +10,10 @@ import {
   type ApiSuccessResponse,
 } from '../../../../common/types/api-response.type';
 import { canTransitionAttachmentStatus } from '../../attachment-status.policy';
+import { AttachmentUploadService } from '../../attachment-upload.service';
 import {
-  ATTACHMENTS_ALLOWED_CONTENT_TYPES,
   ATTACHMENTS_ERROR_CODES,
   ATTACHMENTS_FAILURE_CODES,
-  type AttachmentAllowedContentType,
 } from '../../attachments.constants';
 import { AttachmentsRepository } from '../../infrastructure/attachments.repository';
 import { GcsAttachmentsStorageService } from '../../infrastructure/gcs-attachments-storage.service';
@@ -41,22 +40,17 @@ export class ProcessAttachmentFileEventHandler implements ICommandHandler<
 > {
   private readonly logger = new Logger(ProcessAttachmentFileEventHandler.name);
   private readonly expectedSubscription: string;
-  private readonly maxFileSizeBytes: number;
   private readonly destinations: ReadonlyMap<string, StorageEventDestination>;
 
   constructor(
     private readonly attachmentsRepository: AttachmentsRepository,
     private readonly decoder: PubSubMessageDecoderService,
     private readonly storage: GcsAttachmentsStorageService,
+    private readonly attachmentUploadService: AttachmentUploadService,
     configService: ConfigService,
   ) {
     this.expectedSubscription = configService.getOrThrow<string>(
       'ATTACHMENTS_PUBSUB_SUBSCRIPTION',
-    );
-    this.maxFileSizeBytes = Number(
-      configService.getOrThrow<string | number>(
-        'ATTACHMENTS_MAX_FILE_SIZE_BYTES',
-      ),
     );
     this.destinations = new Map([
       [
@@ -140,12 +134,12 @@ export class ProcessAttachmentFileEventHandler implements ICommandHandler<
           )
         : null;
     const metadataMatches =
-      object.sizeBytes === attachment.sizeBytes &&
-      object.sizeBytes <= this.maxFileSizeBytes &&
-      object.contentType === attachment.contentType &&
-      ATTACHMENTS_ALLOWED_CONTENT_TYPES.includes(
-        object.contentType as AttachmentAllowedContentType,
-      ) &&
+      this.attachmentUploadService.isMatchingUploadedFile({
+        expectedContentType: attachment.contentType,
+        expectedSizeBytes: attachment.sizeBytes,
+        actualContentType: object.contentType,
+        actualSizeBytes: object.sizeBytes,
+      }) &&
       (!cleanMetadata ||
         (cleanMetadata.sizeBytes === object.sizeBytes &&
           cleanMetadata.contentType === object.contentType &&

@@ -3,6 +3,7 @@ import { AttachmentScanStatus } from '@generated/prisma/enums';
 
 import type { PubSubPushEnvelopeDto } from '../../../../common/pubsub/dto/pubsub-push-envelope.dto';
 import { PubSubMessageDecoderService } from '../../../../common/pubsub/pubsub-message-decoder.service';
+import { AttachmentUploadService } from '../../attachment-upload.service';
 import type { StoredAttachment } from '../../attachments.types';
 import { ProcessAttachmentFileEventCommand } from '../impl/process-attachment-file-event.command';
 import { ProcessAttachmentFileEventHandler } from './process-attachment-file-event.handler';
@@ -31,18 +32,22 @@ describe('ProcessAttachmentFileEventHandler', () => {
         generation: '1234567890',
       }),
     };
+    const config = new ConfigService({
+      ATTACHMENTS_PUBSUB_SUBSCRIPTION:
+        'projects/hvac-attachments-dev/subscriptions/attachment-file-events-local',
+      ATTACHMENTS_MAX_FILE_SIZE_BYTES: 10_485_760,
+      ATTACHMENTS_MAX_FILES_PER_REQUEST: 10,
+      ATTACHMENTS_UPLOAD_EXPIRES_SECONDS: 600,
+      ATTACHMENTS_UNSCANNED_BUCKET: 'unscanned-bucket',
+      ATTACHMENTS_CLEAN_BUCKET: 'clean-bucket',
+      ATTACHMENTS_QUARANTINED_BUCKET: 'quarantined-bucket',
+    });
     handler = new ProcessAttachmentFileEventHandler(
       repository as never,
       new PubSubMessageDecoderService(),
       storage as never,
-      new ConfigService({
-        ATTACHMENTS_PUBSUB_SUBSCRIPTION:
-          'projects/hvac-attachments-dev/subscriptions/attachment-file-events-local',
-        ATTACHMENTS_MAX_FILE_SIZE_BYTES: 10_485_760,
-        ATTACHMENTS_UNSCANNED_BUCKET: 'unscanned-bucket',
-        ATTACHMENTS_CLEAN_BUCKET: 'clean-bucket',
-        ATTACHMENTS_QUARANTINED_BUCKET: 'quarantined-bucket',
-      }),
+      new AttachmentUploadService(storage as never, config),
+      config,
     );
   });
 

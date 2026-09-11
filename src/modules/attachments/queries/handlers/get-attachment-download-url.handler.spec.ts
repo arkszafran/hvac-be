@@ -2,6 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AttachmentScanStatus } from '@generated/prisma/enums';
 
+import { AttachmentDownloadService } from '../../attachment-download.service';
 import type { StoredAttachment } from '../../attachments.types';
 import { GetAttachmentDownloadUrlQuery } from '../impl/get-attachment-download-url.query';
 import { GetAttachmentDownloadUrlHandler } from './get-attachment-download-url.handler';
@@ -18,8 +19,10 @@ describe('GetAttachmentDownloadUrlHandler', () => {
   const storage = { createDownloadUrl: jest.fn() };
   const handler = new GetAttachmentDownloadUrlHandler(
     repository as never,
-    storage as never,
-    new ConfigService({ ATTACHMENTS_DOWNLOAD_EXPIRES_SECONDS: 300 }),
+    new AttachmentDownloadService(
+      storage as never,
+      new ConfigService({ ATTACHMENTS_DOWNLOAD_EXPIRES_SECONDS: 300 }),
+    ),
   );
 
   beforeEach(() => {

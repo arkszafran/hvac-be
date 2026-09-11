@@ -30,5 +30,6 @@ import { DevicesQueryHandlers } from './queries';
     ...DevicesCommandHandlers,
     ...DevicesQueryHandlers,
   ],
+  exports: [DevicesRepository, DevicesReadRepository],
 })
 export class DevicesModule {}

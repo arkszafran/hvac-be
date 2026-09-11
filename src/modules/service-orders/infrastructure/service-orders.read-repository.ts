@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@generated/prisma/client';
 import {
+  AttachmentScanStatus,
   ServiceOrderType,
   type ServiceOrderStatus,
 } from '@generated/prisma/enums';
@@ -65,7 +66,233 @@ export class ServiceOrdersReadRepository {
 
     return row ? mapInspectionServiceOrder(row) : null;
   }
+
+  findList(input: {
+    readonly tenantId: string;
+    readonly customerId?: string;
+    readonly type?: ServiceOrderType;
+    readonly statuses?: readonly ServiceOrderStatus[];
+    readonly excludeDeviceId?: string;
+  }): Promise<ServiceOrderListRow[]> {
+    return this.prisma.serviceOrder.findMany({
+      where: {
+        tenantId: input.tenantId,
+        ...(input.customerId ? { customerId: input.customerId } : {}),
+        ...(input.type ? { type: input.type } : {}),
+        ...(input.statuses ? { status: { in: [...input.statuses] } } : {}),
+        ...(input.excludeDeviceId
+          ? {
+              devices: {
+                none: { systemDeviceId: input.excludeDeviceId },
+              },
+            }
+          : {}),
+      },
+      select: serviceOrderListSelect,
+    });
+  }
+
+  findDetailsWithoutAttachments(
+    tenantId: string,
+    serviceOrderId: string,
+  ): Promise<ServiceOrderDetailsWithoutAttachmentsRow | null> {
+    return this.prisma.serviceOrder.findFirst({
+      where: { id: serviceOrderId, tenantId },
+      select: serviceOrderDetailsWithoutAttachmentsSelect,
+    });
+  }
+
+  findDetailsWithAttachments(
+    tenantId: string,
+    serviceOrderId: string,
+  ): Promise<ServiceOrderDetailsWithAttachmentsRow | null> {
+    return this.prisma.serviceOrder.findFirst({
+      where: { id: serviceOrderId, tenantId },
+      select: serviceOrderDetailsWithAttachmentsSelect,
+    });
+  }
 }
+
+const encryptedCustomerSelect = {
+  id: true,
+  tenantId: true,
+  piiCiphertext: true,
+  piiNonce: true,
+  piiKeyVersion: true,
+  piiFormatVersion: true,
+} satisfies Prisma.CustomerSelect;
+
+const systemDeviceSelect = {
+  id: true,
+  tenantId: true,
+  type: true,
+  brand: true,
+  model: true,
+  serialNumber: true,
+  refrigerant: true,
+  refrigerantAmount: true,
+  location: true,
+  hasCustomInstallationAddress: true,
+  installationAddressCiphertext: true,
+  installationAddressNonce: true,
+  installationAddressKeyVersion: true,
+  installationAddressFormatVersion: true,
+} satisfies Prisma.DeviceSelect;
+
+const orderDeviceBaseSelect = {
+  id: true,
+  systemDeviceId: true,
+  deviceType: true,
+  brand: true,
+  model: true,
+  serialNumber: true,
+  refrigerant: true,
+  refrigerantAmount: true,
+  displayedError: true,
+  sortOrder: true,
+  systemDevice: { select: systemDeviceSelect },
+} satisfies Prisma.ServiceOrderDeviceSelect;
+
+const serviceOrderCoreSelect = {
+  id: true,
+  tenantId: true,
+  customerId: true,
+  customerType: true,
+  customerSnapshotCiphertext: true,
+  customerSnapshotNonce: true,
+  customerSnapshotKeyVersion: true,
+  customerSnapshotFormatVersion: true,
+  type: true,
+  source: true,
+  status: true,
+  assigneeUserId: true,
+  orderDate: true,
+  scheduledAt: true,
+  nextContactAt: true,
+  createdAt: true,
+  updatedAt: true,
+  customer: { select: encryptedCustomerSelect },
+  assignee: { select: { id: true, name: true, email: true } },
+} satisfies Prisma.ServiceOrderSelect;
+
+const serviceOrderListSelect = {
+  ...serviceOrderCoreSelect,
+  devices: {
+    orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
+    select: orderDeviceBaseSelect,
+  },
+} satisfies Prisma.ServiceOrderSelect;
+
+const roomBaseSelect = {
+  id: true,
+  area: true,
+  height: true,
+  outdoorUnitPlace: true,
+  estimatedDistanceToOutdoorUnit: true,
+  floor: true,
+  sortOrder: true,
+} satisfies Prisma.ServiceOrderRoomSelect;
+
+const noteBaseSelect = {
+  id: true,
+  content: true,
+  createdAt: true,
+  updatedAt: true,
+  author: { select: { id: true, name: true } },
+} satisfies Prisma.ServiceOrderNoteSelect;
+
+const cleanAttachmentSelect = {
+  id: true,
+  tenantId: true,
+  fileName: true,
+  objectKey: true,
+  contentType: true,
+  sizeBytes: true,
+  scanStatus: true,
+  storageGeneration: true,
+  description: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.PhotoAttachmentSelect;
+
+const latestMessageSelect = {
+  orderBy: [
+    { date: 'desc' as const },
+    { createdAt: 'desc' as const },
+    { id: 'desc' as const },
+  ],
+  take: 1,
+  select: { date: true, confirmationStatus: true },
+} satisfies Prisma.ServiceOrder$messagesArgs;
+
+const serviceOrderDetailsWithoutAttachmentsSelect = {
+  ...serviceOrderCoreSelect,
+  installationData: { select: { buildingType: true } },
+  rooms: {
+    orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
+    select: roomBaseSelect,
+  },
+  devices: {
+    orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
+    select: orderDeviceBaseSelect,
+  },
+  notes: {
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+    select: noteBaseSelect,
+  },
+  messages: latestMessageSelect,
+} satisfies Prisma.ServiceOrderSelect;
+
+const attachmentsRelation = {
+  where: { scanStatus: AttachmentScanStatus.clean },
+  orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
+  select: cleanAttachmentSelect,
+};
+
+const serviceOrderDetailsWithAttachmentsSelect = {
+  ...serviceOrderCoreSelect,
+  installationData: { select: { buildingType: true } },
+  rooms: {
+    orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
+    select: {
+      ...roomBaseSelect,
+      photoAttachments: attachmentsRelation,
+    },
+  },
+  devices: {
+    orderBy: [{ sortOrder: 'asc' as const }, { id: 'asc' as const }],
+    select: {
+      ...orderDeviceBaseSelect,
+      photoAttachments: attachmentsRelation,
+    },
+  },
+  notes: {
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
+    select: {
+      ...noteBaseSelect,
+      photoAttachments: attachmentsRelation,
+    },
+  },
+  messages: latestMessageSelect,
+  photoAttachments: attachmentsRelation,
+} satisfies Prisma.ServiceOrderSelect;
+
+export type ServiceOrderListRow = Prisma.ServiceOrderGetPayload<{
+  select: typeof serviceOrderListSelect;
+}>;
+
+export type ServiceOrderDetailsWithoutAttachmentsRow =
+  Prisma.ServiceOrderGetPayload<{
+    select: typeof serviceOrderDetailsWithoutAttachmentsSelect;
+  }>;
+
+export type ServiceOrderDetailsWithAttachmentsRow =
+  Prisma.ServiceOrderGetPayload<{
+    select: typeof serviceOrderDetailsWithAttachmentsSelect;
+  }>;
+
+export type ServiceOrderAttachmentRow =
+  ServiceOrderDetailsWithAttachmentsRow['photoAttachments'][number];
 
 const inspectionServiceOrderSelect = {
   id: true,

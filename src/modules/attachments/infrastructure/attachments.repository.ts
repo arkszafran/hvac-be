@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import type { AttachmentScanStatus, Prisma } from '@generated/prisma/client';
 
 import { PrismaService } from '../../../common/prisma/prisma.service';
-import type { StoredAttachment } from '../attachments.types';
+import type {
+  PreparedPendingAttachment,
+  StoredAttachment,
+} from '../attachments.types';
 
 const ATTACHMENT_SELECT = {
   id: true,
@@ -22,16 +25,20 @@ const ATTACHMENT_SELECT = {
   updatedAt: true,
 } satisfies Prisma.PhotoAttachmentSelect;
 
-export type CreatePendingAttachmentInput = {
-  readonly id: string;
-  readonly tenantId: string;
-  readonly fileName: string;
-  readonly objectKey: string;
-  readonly contentType: string;
-  readonly sizeBytes: number;
-  readonly uploadExpiresAt: Date;
-  readonly description: string | null;
+export type CreatePendingAttachmentInput = PreparedPendingAttachment & {
+  readonly owner?: AttachmentOwner;
+  readonly sortOrder?: number;
 };
+
+export type AttachmentOwner =
+  | { readonly kind: 'service_order'; readonly serviceOrderId: string }
+  | { readonly kind: 'service_order_room'; readonly serviceOrderRoomId: string }
+  | {
+      readonly kind: 'service_order_device';
+      readonly serviceOrderDeviceId: string;
+    }
+  | { readonly kind: 'service_order_note'; readonly serviceOrderNoteId: string }
+  | { readonly kind: 'visit'; readonly visitId: string };
 
 export type UpdateAttachmentFromStorageEventInput = {
   readonly id: string;
@@ -51,24 +58,44 @@ export class AttachmentsRepository {
 
   async createPendingMany(
     inputs: readonly CreatePendingAttachmentInput[],
+    transaction?: Prisma.TransactionClient,
   ): Promise<StoredAttachment[]> {
-    return this.prisma.$transaction(
-      inputs.map((input) =>
-        this.prisma.photoAttachment.create({
-          data: {
-            id: input.id,
-            tenantId: input.tenantId,
-            fileName: input.fileName,
-            objectKey: input.objectKey,
-            contentType: input.contentType,
-            sizeBytes: input.sizeBytes,
-            uploadExpiresAt: input.uploadExpiresAt,
-            description: input.description,
-          },
-          select: ATTACHMENT_SELECT,
-        }),
+    if (inputs.length === 0) {
+      return [];
+    }
+
+    if (transaction) {
+      return Promise.all(
+        inputs.map((input) => this.createPending(input, transaction)),
+      );
+    }
+
+    return this.prisma.$transaction((createdTransaction) =>
+      Promise.all(
+        inputs.map((input) => this.createPending(input, createdTransaction)),
       ),
     );
+  }
+
+  private createPending(
+    input: CreatePendingAttachmentInput,
+    database: Pick<Prisma.TransactionClient, 'photoAttachment'>,
+  ): Promise<StoredAttachment> {
+    return database.photoAttachment.create({
+      data: {
+        id: input.id,
+        tenantId: input.tenantId,
+        fileName: input.fileName,
+        objectKey: input.objectKey,
+        contentType: input.contentType,
+        sizeBytes: input.sizeBytes,
+        uploadExpiresAt: input.uploadExpiresAt,
+        description: input.description,
+        sortOrder: input.sortOrder ?? 0,
+        ...mapOwner(input.owner),
+      },
+      select: ATTACHMENT_SELECT,
+    });
   }
 
   findByObjectKey(objectKey: string): Promise<StoredAttachment | null> {
@@ -105,5 +132,28 @@ export class AttachmentsRepository {
       where: { id: input.id },
       select: ATTACHMENT_SELECT,
     });
+  }
+}
+
+function mapOwner(owner: AttachmentOwner | undefined): {
+  readonly serviceOrderId?: string;
+  readonly serviceOrderRoomId?: string;
+  readonly serviceOrderDeviceId?: string;
+  readonly serviceOrderNoteId?: string;
+  readonly visitId?: string;
+} {
+  switch (owner?.kind) {
+    case 'service_order':
+      return { serviceOrderId: owner.serviceOrderId };
+    case 'service_order_room':
+      return { serviceOrderRoomId: owner.serviceOrderRoomId };
+    case 'service_order_device':
+      return { serviceOrderDeviceId: owner.serviceOrderDeviceId };
+    case 'service_order_note':
+      return { serviceOrderNoteId: owner.serviceOrderNoteId };
+    case 'visit':
+      return { visitId: owner.visitId };
+    default:
+      return {};
   }
 }

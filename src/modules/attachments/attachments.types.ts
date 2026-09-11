@@ -24,7 +24,42 @@ export type AttachmentUploadPolicy = {
   readonly expiresAt: Date;
 };
 
+export type AttachmentUploadFile = {
+  readonly id: string;
+  readonly fileName: string;
+  readonly contentType: string;
+  readonly sizeBytes: number;
+  readonly description?: string | null;
+};
+
+export type PreparedPendingAttachment = AttachmentUploadFile & {
+  readonly tenantId: string;
+  readonly objectKey: string;
+  readonly contentType: string;
+  readonly description: string | null;
+  readonly uploadExpiresAt: Date;
+};
+
+export type UploadableAttachment = Pick<
+  PreparedPendingAttachment,
+  'objectKey' | 'contentType' | 'uploadExpiresAt'
+>;
+
+export type AttachmentUploadForm = AttachmentUploadPolicy & {
+  readonly method: 'POST';
+};
+
 export type AttachmentDownloadLink = {
   readonly url: string;
   readonly expiresAt: Date;
 };
+
+export type DownloadableAttachment = Pick<
+  StoredAttachment,
+  | 'id'
+  | 'tenantId'
+  | 'fileName'
+  | 'objectKey'
+  | 'scanStatus'
+  | 'storageGeneration'
+>;

@@ -26,6 +26,10 @@ import { CustomersQueryHandlers } from './queries';
     ...CustomersCommandHandlers,
     ...CustomersQueryHandlers,
   ],
-  exports: [CustomersRepository],
+  exports: [
+    CustomersRepository,
+    CustomersReadRepository,
+    CustomerEmailLookupService,
+  ],
 })
 export class CustomersModule {}
